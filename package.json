@@ -1,0 +1,15 @@
+{
+  "name": "qrose",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "db:init": "npm --prefix backend run db:init"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
