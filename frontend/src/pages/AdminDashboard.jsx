@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { apiRequest } from "../lib/api";
-import { COLOR_PALETTE_OPTIONS, THEME_OPTIONS, normalizePaletteKey, normalizeThemeKey } from "../themes/themeStyles";
+import { THEME_OPTIONS, normalizeThemeKey } from "../themes/themeStyles";
 
 const THEME_COLOR = {
   cafe: "bg-amber-100 text-amber-900 border-amber-200",
   restaurant: "bg-zinc-800 text-zinc-100 border-zinc-700",
   fast_food: "bg-orange-100 text-orange-800 border-orange-200"
-};
-
-const PALETTE_COLOR = {
-  sunset: "bg-orange-100 text-orange-700 border-orange-200",
-  emerald: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  royal: "bg-indigo-100 text-indigo-700 border-indigo-200"
 };
 
 export default function AdminDashboard() {
@@ -22,8 +16,12 @@ export default function AdminDashboard() {
   const [form, setForm] = useState({
     name: "",
     restaurant_name: "",
-    theme: "cafe",
-    color_palette: "sunset",
+    theme: "fast_food",
+    brand_icon: "",
+    shop_description: "",
+    contact_phone: "",
+    contact_email: "",
+    address_line: "",
     owner_email: "",
     owner_password: "",
     supported_languages: "en,tr,de,fr"
@@ -51,7 +49,6 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           ...form,
           theme: normalizeThemeKey(form.theme),
-          color_palette: normalizePaletteKey(form.color_palette),
           supported_languages: form.supported_languages
             .split(",")
             .map((s) => s.trim())
@@ -61,8 +58,12 @@ export default function AdminDashboard() {
       setForm({
         name: "",
         restaurant_name: "",
-        theme: "cafe",
-        color_palette: "sunset",
+        theme: "fast_food",
+        brand_icon: "",
+        shop_description: "",
+        contact_phone: "",
+        contact_email: "",
+        address_line: "",
         owner_email: "",
         owner_password: "",
         supported_languages: "en,tr,de,fr"
@@ -174,24 +175,42 @@ export default function AdminDashboard() {
               </option>
             ))}
           </select>
-          <select
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            onChange={(e) =>
-              setForm((f) => ({ ...f, color_palette: normalizePaletteKey(e.target.value) }))
-            }
-            value={normalizePaletteKey(form.color_palette)}
-          >
-            {COLOR_PALETTE_OPTIONS.map((palette) => (
-              <option key={palette.value} value={palette.value}>
-                {palette.label}
-              </option>
-            ))}
-          </select>
           <input
             className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             onChange={(e) => setForm((f) => ({ ...f, supported_languages: e.target.value }))}
             placeholder="Languages: en,tr,de,fr"
             value={form.supported_languages}
+          />
+          <input
+            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            onChange={(e) => setForm((f) => ({ ...f, brand_icon: e.target.value }))}
+            placeholder="Brand icon URL (optional)"
+            value={form.brand_icon}
+          />
+          <textarea
+            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            onChange={(e) => setForm((f) => ({ ...f, shop_description: e.target.value }))}
+            placeholder="Shop description (optional)"
+            rows={2}
+            value={form.shop_description}
+          />
+          <input
+            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))}
+            placeholder="Contact phone (optional)"
+            value={form.contact_phone}
+          />
+          <input
+            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
+            placeholder="Contact email (optional)"
+            value={form.contact_email}
+          />
+          <input
+            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            onChange={(e) => setForm((f) => ({ ...f, address_line: e.target.value }))}
+            placeholder="Address (optional)"
+            value={form.address_line}
           />
           <input
             className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
@@ -240,6 +259,15 @@ export default function AdminDashboard() {
                     <p className="text-lg font-semibold text-slate-900">{menu.restaurant_name}</p>
                     <p className="text-sm text-slate-500">{menu.slug}</p>
                     <p className="mt-1 text-sm text-slate-500">owner: {menu.owner_email}</p>
+                    {menu.contact_phone ? (
+                      <p className="mt-1 text-sm text-slate-500">phone: {menu.contact_phone}</p>
+                    ) : null}
+                    {menu.contact_email ? (
+                      <p className="mt-1 text-sm text-slate-500">contact: {menu.contact_email}</p>
+                    ) : null}
+                    {menu.address_line ? (
+                      <p className="mt-1 text-sm text-slate-500">address: {menu.address_line}</p>
+                    ) : null}
                   </div>
                   <div className="flex gap-2">
                     <span
@@ -250,16 +278,16 @@ export default function AdminDashboard() {
                     >
                       {normalizeThemeKey(menu.theme).replaceAll("_", " ")}
                     </span>
-                    <span
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                        PALETTE_COLOR[normalizePaletteKey(menu.color_palette)] ||
-                        "bg-slate-100 text-slate-700 border-slate-200"
-                      }`}
-                    >
-                      {normalizePaletteKey(menu.color_palette)}
-                    </span>
+                    {menu.brand_icon ? (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                        icon set
+                      </span>
+                    ) : null}
                   </div>
                 </div>
+                {menu.shop_description ? (
+                  <p className="mt-2 text-sm text-slate-600">{menu.shop_description}</p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"

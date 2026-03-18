@@ -2,7 +2,22 @@ import { pool } from "../db/pool.js";
 
 export async function getFullMenuByMenuId(menuId) {
   const menuResult = await pool.query(
-    "SELECT id, name, restaurant_name, slug, theme, color_palette, supported_languages, owner_user_id FROM menus WHERE id = $1",
+    `SELECT
+       id,
+       name,
+       restaurant_name,
+       slug,
+       theme,
+       color_palette,
+       brand_icon,
+       shop_description,
+       contact_phone,
+       contact_email,
+       address_line,
+       supported_languages,
+       owner_user_id
+     FROM menus
+     WHERE id = $1`,
     [menuId]
   );
   const menu = menuResult.rows[0];
@@ -11,14 +26,32 @@ export async function getFullMenuByMenuId(menuId) {
   }
 
   const categoriesResult = await pool.query(
-    "SELECT id, menu_id, name, sort_order FROM categories WHERE menu_id = $1 ORDER BY sort_order ASC, id ASC",
+    `SELECT
+       id,
+       menu_id,
+       name,
+       short_description,
+       image,
+       sort_order
+     FROM categories
+     WHERE menu_id = $1
+     ORDER BY sort_order ASC, id ASC`,
     [menuId]
   );
 
   const categories = [];
   for (const category of categoriesResult.rows) {
     const itemsResult = await pool.query(
-      "SELECT id, category_id, price::float8 AS price, image, sort_order FROM menu_items WHERE category_id = $1 ORDER BY sort_order ASC, id ASC",
+      `SELECT
+         id,
+         category_id,
+         price::float8 AS price,
+         image,
+         sort_order,
+         created_at
+       FROM menu_items
+       WHERE category_id = $1
+       ORDER BY sort_order ASC, id ASC`,
       [category.id]
     );
     const items = [];

@@ -1,187 +1,397 @@
+import { useMemo, useState } from "react";
 import MenuImage from "../components/MenuImage";
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
-import { useParallaxOffset } from "../lib/useParallaxOffset";
-import { normalizePaletteKey } from "./themeStyles";
+import { formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
 
-const fastFoodPalette = {
-  sunset: {
-    heroBorder: "border-orange-300",
-    heroText: "text-orange-700",
-    heroSub: "text-orange-500",
-    sticker: "bg-red-500 text-white",
-    navActive: "border-orange-500 bg-orange-500 text-white",
-    navIdle: "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-500 hover:bg-orange-100",
-    sectionBadge: "bg-orange-600 text-white",
-    cardBorderA: "border-orange-300",
-    cardBorderB: "border-red-200",
-    price: "bg-orange-100 text-orange-700"
-  },
-  emerald: {
-    heroBorder: "border-emerald-300",
-    heroText: "text-emerald-700",
-    heroSub: "text-emerald-500",
-    sticker: "bg-emerald-600 text-white",
-    navActive: "border-emerald-500 bg-emerald-500 text-white",
-    navIdle: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100",
-    sectionBadge: "bg-emerald-600 text-white",
-    cardBorderA: "border-emerald-300",
-    cardBorderB: "border-teal-200",
-    price: "bg-emerald-100 text-emerald-700"
-  },
-  royal: {
-    heroBorder: "border-indigo-300",
-    heroText: "text-indigo-700",
-    heroSub: "text-indigo-500",
-    sticker: "bg-indigo-600 text-white",
-    navActive: "border-indigo-500 bg-indigo-500 text-white",
-    navIdle: "border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-500 hover:bg-indigo-100",
-    sectionBadge: "bg-indigo-600 text-white",
-    cardBorderA: "border-indigo-300",
-    cardBorderB: "border-violet-200",
-    price: "bg-indigo-100 text-indigo-700"
+const WAITRESS_SECTION_ID = "call-waitress";
+
+export default function FastFoodTheme({ menu, languageCode, onLanguageChange, colorPalette }) {
+  void colorPalette;
+  const heroSizingStyle = {
+    height: "calc(100dvh - 92px)",
+    minHeight: "calc(100vh - 92px)"
+  };
+
+  const allItems = useMemo(
+    () =>
+      menu.categories.flatMap((category) =>
+        category.items.map((item) => ({
+          ...item,
+          categoryId: category.id,
+          categoryName: category.name
+        }))
+      ),
+    [menu]
+  );
+
+  const recentItems = useMemo(
+    () =>
+      [...allItems]
+        .sort(
+          (a, b) =>
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime() ||
+            Number(b.id) - Number(a.id)
+        )
+        .slice(0, 8),
+    [allItems]
+  );
+
+  const heroImage = useMemo(() => allItems.find((item) => item.image)?.image || null, [allItems]);
+  const [qtyByItemId, setQtyByItemId] = useState({});
+
+  const lineItems = useMemo(
+    () =>
+      allItems
+        .map((item) => ({
+          item,
+          qty: Number(qtyByItemId[item.id] || 0)
+        }))
+        .filter((entry) => entry.qty > 0),
+    [allItems, qtyByItemId]
+  );
+
+  const totalAmount = useMemo(
+    () => lineItems.reduce((sum, entry) => sum + Number(entry.item.price || 0) * entry.qty, 0),
+    [lineItems]
+  );
+
+  function changeQty(itemId, delta) {
+    setQtyByItemId((prev) => {
+      const next = Math.max(0, Number(prev[itemId] || 0) + delta);
+      if (!next) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      return { ...prev, [itemId]: next };
+    });
   }
-};
 
-export default function FastFoodTheme({ menu, languageCode, activeCategoryId, colorPalette }) {
-  const palette = fastFoodPalette[normalizePaletteKey(colorPalette)];
-  const stickerStyle = useParallaxOffset(0.05, 18);
-  const heroItems = menu.categories
-    .flatMap((category) => category.items.map((item) => ({ ...item, categoryName: category.name })))
-    .slice(0, 4);
-  const heroImage = heroItems.find((item) => item.image)?.image;
+  function resetEstimator() {
+    setQtyByItemId({});
+  }
 
   return (
-    <div className="mx-auto max-w-6xl p-3 pb-12 sm:p-4">
-      <div className={`menu-reveal relative rounded-3xl border-2 bg-white/90 p-5 shadow-md ${palette.heroBorder}`}>
-        {heroImage ? (
-          <MenuImage
-            alt="hero"
-            className="absolute inset-0 h-full w-full object-cover"
-            src={apiFileUrl(heroImage)}
-            wrapperClassName="absolute inset-0 rounded-3xl"
-          />
-        ) : null}
-        <div className="absolute inset-0 rounded-3xl bg-white/70" />
-        <div className={`absolute -right-2 -top-3 rotate-3 rounded-md px-3 py-1 text-xs font-black uppercase tracking-wide ${palette.sticker}`} style={stickerStyle}>
-          Hot Picks
-        </div>
-        <p className={`relative text-xs font-black uppercase tracking-[0.2em] ${palette.heroSub}`}>Fast Food Theme</p>
-        <h1 className={`menu-display-street relative text-4xl uppercase ${palette.heroText}`}>{menu.restaurant_name}</h1>
-        <p className={`relative mt-1 max-w-2xl text-sm font-medium ${palette.heroSub}`}>{menu.name}</p>
-        <div className="relative mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">
-            20 min delivery
-          </span>
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">
-            Combo deals
-          </span>
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">
-            Late night
-          </span>
-        </div>
-      </div>
-
-      <div className="menu-reveal mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {heroItems.map((item, index) => {
-          const translation = getItemTranslation(item, languageCode);
-          return (
-            <article className={`overflow-hidden rounded-2xl border-2 bg-white shadow-sm ${index % 2 === 0 ? palette.cardBorderA : palette.cardBorderB}`} key={item.id}>
-              {item.image ? (
-                <MenuImage
-                  alt={translation?.item_name || "menu item"}
-                  className="h-40 w-full object-cover"
-                  src={apiFileUrl(item.image)}
-                />
-              ) : (
-                <div className="h-40 bg-slate-100" />
-              )}
-              <div className="p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`truncate font-bold ${palette.heroText}`}>{translation?.item_name || "Unnamed Item"}</p>
-                  <strong className={`rounded-full px-2 py-1 text-xs ${palette.price}`}>{formatPrice(item.price)}</strong>
-                </div>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{item.categoryName}</p>
-                <div className="mt-2 flex gap-1.5">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">Top</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">Quick</span>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      <div className="menu-reveal-soft sticky top-[56px] z-10 mt-4 hidden overflow-x-auto rounded-2xl border-2 border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur md:block">
-        <div className="flex gap-2 px-1">
-          {menu.categories.map((category) => (
-            <a
-              className={`menu-chip-touch whitespace-nowrap rounded-full border-2 px-4 text-xs font-black uppercase tracking-wide transition ${
-                activeCategoryId === category.id ? palette.navActive : palette.navIdle
-              }`}
-              href={`#${categoryAnchor(category.id)}`}
-              key={category.id}
+    <div className="pb-14">
+      <header className="menu-reveal sticky top-0 z-20 bg-white/40 backdrop-blur">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-slate-200 bg-white/95 px-5 py-2 sm:px-8 lg:px-12">
+          <div />
+          <div className="flex items-center gap-3 justify-self-center">
+            <BrandIcon brandIcon={menu.brand_icon} restaurantName={menu.restaurant_name} />
+            <div className="text-center">
+              <p className="menu-display-street text-2xl uppercase leading-none text-slate-900 sm:text-3xl">
+                {menu.restaurant_name}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-self-end gap-3 sm:gap-4">
+            <select
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-orange-400"
+              onChange={(e) => onLanguageChange?.(e.target.value)}
+              value={languageCode}
             >
-              {category.name}
-            </a>
-          ))}
-        </div>
-      </div>
-
-      {menu.categories.map((category, categoryIndex) => (
-        <section
-          className="menu-reveal mt-7 scroll-mt-20 md:scroll-mt-24"
-          id={categoryAnchor(category.id)}
-          key={category.id}
-          style={{ animationDelay: `${120 + categoryIndex * 60}ms` }}
-        >
-          <h2 className={`inline-block -rotate-1 rounded-md px-3 py-1 text-xs font-black uppercase tracking-wider shadow ${palette.sectionBadge}`}>
-            {category.name}
-          </h2>
-          {category.items[0]?.image ? (
-            <MenuImage
-              alt={category.name}
-              className="mb-3 h-36 w-full rounded-2xl object-cover"
-              src={apiFileUrl(category.items[0].image)}
-              wrapperClassName="mb-3 rounded-2xl border-2 border-slate-200"
+              {menu.supported_languages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <CartDropdown
+              languageCode={languageCode}
+              lineItems={lineItems}
+              onReset={resetEstimator}
+              onUpdateQty={changeQty}
+              totalAmount={totalAmount}
             />
-          ) : null}
-          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {category.items.map((item, itemIndex) => {
+          </div>
+        </div>
+      </header>
+
+      <section className="menu-reveal relative mb-8 overflow-hidden border-b border-slate-200 bg-white shadow-lg">
+        <div style={heroSizingStyle}>
+          {heroImage ? (
+            <MenuImage
+              alt={menu.restaurant_name}
+              className="h-full w-full object-cover"
+              src={apiFileUrl(heroImage)}
+              wrapperClassName="h-full"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange-100 via-amber-100 to-orange-200">
+              <PhotoPlaceholder />
+            </div>
+          )}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl p-5 text-white sm:p-7">
+          <p className="mt-2 max-w-2xl text-sm text-slate-100 sm:text-base">
+            {menu.shop_description || "Fresh food, bold flavors, and quick service every day."}
+          </p>
+          <a
+            className="mt-4 inline-flex rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+            href={`#${WAITRESS_SECTION_ID}`}
+          >
+            Call a Waitress
+          </a>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-3 sm:px-4">
+        <section className="menu-reveal mb-8">
+          <div className="mb-3">
+            <h2 className="menu-display-street text-3xl uppercase text-slate-900">Categories</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {menu.categories.map((category) => (
+              <CategoryTile key={category.id} category={category} />
+            ))}
+          </div>
+        </section>
+
+        <section className="menu-reveal mb-8">
+          <div className="mb-3">
+            <h2 className="menu-display-street text-3xl uppercase text-slate-900">Most Popular & Recent</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recentItems.map((item) => {
               const translation = getItemTranslation(item, languageCode);
-              const itemTag = itemIndex % 3 === 0 ? "Popular" : itemIndex % 3 === 1 ? "New" : "Spicy";
+              const qty = Number(qtyByItemId[item.id] || 0);
               return (
-                <article
-                  className={`menu-card menu-reveal overflow-hidden rounded-2xl border-2 bg-white p-3 shadow-sm ${
-                    itemIndex % 2 === 0 ? palette.cardBorderA : palette.cardBorderB
-                  }`}
-                  key={item.id}
-                  style={{ animationDelay: `${160 + itemIndex * 45}ms` }}
-                >
+                <article className="menu-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" key={item.id}>
                   {item.image ? (
                     <MenuImage
                       alt={translation?.item_name || "menu item"}
-                      className="mb-3 h-40 w-full rounded-xl object-cover"
-                      wrapperClassName="mb-3 rounded-xl"
+                      className="h-40 w-full object-cover"
                       src={apiFileUrl(item.image)}
                     />
-                  ) : null}
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className={palette.heroText}>{translation?.item_name || "Unnamed Item"}</h3>
-                      <span className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                        {itemTag}
-                      </span>
+                  ) : (
+                    <div className="flex h-40 items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 text-orange-500">
+                      <PhotoPlaceholder />
                     </div>
-                    <strong className={`rounded-full px-3 py-1 text-sm ${palette.price}`}>{formatPrice(item.price)}</strong>
+                  )}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">
+                          {translation?.item_name || "Unnamed Item"}
+                        </h3>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">{item.categoryName}</p>
+                      </div>
+                      <strong className="rounded-full bg-slate-900 px-3 py-1 text-sm text-white">
+                        {formatPrice(item.price)}
+                      </strong>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                      {translation?.description || "Chef special fast-food favorite."}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold uppercase text-orange-700">
+                        Recent
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {qty > 0 ? <span className="text-xs font-semibold text-slate-600">{qty} in cart</span> : null}
+                        <button
+                          className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-orange-600"
+                          onClick={() => changeQty(item.id, 1)}
+                          type="button"
+                        >
+                          Add to cart
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{translation?.description || ""}</p>
                 </article>
               );
             })}
           </div>
         </section>
-      ))}
+
+        <section className="menu-reveal mb-8" id={WAITRESS_SECTION_ID}>
+          <div className="rounded-3xl border border-orange-200 bg-gradient-to-r from-orange-500 to-amber-500 p-6 text-white shadow-md">
+            <h2 className="menu-display-street mt-1 text-3xl uppercase">Call a Waitress</h2>
+            <p className="mt-2 max-w-2xl text-sm text-orange-50">
+              Need help with recommendations, extras, or table service? Tap the button below.
+            </p>
+            <button
+              className="mt-4 rounded-full border border-white/40 bg-white/15 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+              type="button"
+            >
+              Call Waitress
+            </button>
+          </div>
+        </section>
+
+      </div>
+      <footer className="menu-reveal border-y border-slate-200 bg-white/95 py-6 shadow-sm">
+        <div className="mx-auto max-w-6xl px-3 sm:px-4">
+          <h3 className="menu-display-street text-2xl uppercase text-slate-900">Contact & Address</h3>
+          <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+            <p>
+              <span className="font-semibold text-slate-800">Phone:</span>{" "}
+              {menu.contact_phone || "Not provided yet"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-800">Email:</span>{" "}
+              {menu.contact_email || "Not provided yet"}
+            </p>
+            <p className="sm:col-span-2">
+              <span className="font-semibold text-slate-800">Address:</span>{" "}
+              {menu.address_line || "Not provided yet"}
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
+  );
+}
+
+function CartDropdown({ lineItems, totalAmount, onUpdateQty, onReset, languageCode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const totalCount = lineItems.reduce((sum, entry) => sum + entry.qty, 0);
+  return (
+    <div className="relative">
+      <button
+        aria-expanded={isOpen}
+        aria-label="Open cart"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+        onClick={() => setIsOpen((prev) => !prev)}
+        type="button"
+      >
+        <CartIcon />
+        {totalCount ? (
+          <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            {totalCount}
+          </span>
+        ) : null}
+      </button>
+
+      {isOpen ? (
+        <aside className="absolute right-0 top-12 z-30 w-[300px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Order Card</p>
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+              {totalCount} items
+            </span>
+          </div>
+          <div className="mt-2 max-h-56 space-y-2 overflow-auto">
+            {lineItems.length ? (
+              lineItems.map(({ item, qty }) => (
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5" key={item.id}>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-800">
+                      {getItemTranslation(item, languageCode)?.item_name || `Item #${item.id}`}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{formatPrice(item.price)}</p>
+                  </div>
+                  <div className="ml-2 flex items-center gap-1">
+                    <button
+                      className="h-6 w-6 rounded-full border border-slate-300 text-xs text-slate-700"
+                      onClick={() => onUpdateQty(item.id, -1)}
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <span className="w-4 text-center text-xs font-semibold">{qty}</span>
+                    <button
+                      className="h-6 w-6 rounded-full bg-orange-500 text-xs text-white"
+                      onClick={() => onUpdateQty(item.id, 1)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500">No items yet.</p>
+            )}
+          </div>
+          <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2">
+            <p className="text-xs font-semibold text-slate-600">Total</p>
+            <p className="text-sm font-extrabold text-slate-900">{formatPrice(totalAmount)}</p>
+          </div>
+          <button
+            className="mt-2 w-full rounded-md border border-slate-300 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            onClick={onReset}
+            type="button"
+          >
+            Clear Cart
+          </button>
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M3 5h2l2.2 9.2a1 1 0 0 0 1 .8H18a1 1 0 0 0 1-.8L21 7H7" />
+      <circle cx="10" cy="19" r="1.6" />
+      <circle cx="17" cy="19" r="1.6" />
+    </svg>
+  );
+}
+
+function BrandIcon({ brandIcon, restaurantName }) {
+  if (brandIcon) {
+    return (
+      <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <MenuImage
+          alt={`${restaurantName} icon`}
+          className="h-full w-full object-cover"
+          src={brandIcon.startsWith("/uploads/") ? apiFileUrl(brandIcon) : brandIcon}
+          wrapperClassName="h-full w-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-lg font-black uppercase text-white shadow-sm">
+      {restaurantName
+        .split(" ")
+        .map((part) => part[0] || "")
+        .join("")
+        .slice(0, 2)}
+    </div>
+  );
+}
+
+function CategoryTile({ category }) {
+  const imagePath = category.image || category.items.find((item) => item.image)?.image || "";
+  const shortDescription = category.short_description || `${category.items.length} items available`;
+
+  return (
+    <article className="menu-card group relative h-52 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+      {imagePath ? (
+        <MenuImage
+          alt={category.name}
+          className="h-full w-full object-cover"
+          src={imagePath.startsWith("/uploads/") ? apiFileUrl(imagePath) : imagePath}
+          wrapperClassName="h-full w-full"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 text-orange-400">
+          <PhotoPlaceholder />
+        </div>
+      )}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/30 px-4 text-center">
+        <h3 className="menu-display-street text-3xl uppercase text-white drop-shadow">{category.name}</h3>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/85 via-black/70 to-transparent p-3 text-sm text-slate-100 transition-transform duration-300 group-hover:translate-y-0">
+        {shortDescription}
+      </div>
+    </article>
+  );
+}
+
+function PhotoPlaceholder() {
+  return (
+    <svg aria-hidden="true" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <rect height="14" rx="2" width="18" x="3" y="5" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path d="m7 17 4-4 3 3 3-2 2 3" />
+    </svg>
   );
 }

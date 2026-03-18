@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { apiRequest } from "../lib/api";
-import { COLOR_PALETTE_OPTIONS, THEME_OPTIONS, normalizePaletteKey, normalizeThemeKey } from "../themes/themeStyles";
+import { THEME_OPTIONS, normalizeThemeKey } from "../themes/themeStyles";
 
 export default function RestaurantDashboard() {
   const [menu, setMenu] = useState(null);
@@ -15,6 +15,8 @@ export default function RestaurantDashboard() {
     image: null
   });
   const [categoryName, setCategoryName] = useState("");
+  const [categoryShortDescription, setCategoryShortDescription] = useState("");
+  const [categoryImage, setCategoryImage] = useState("");
 
   async function loadMenu() {
     try {
@@ -42,7 +44,11 @@ export default function RestaurantDashboard() {
           name: menu.name,
           restaurant_name: menu.restaurant_name,
           theme: normalizeThemeKey(menu.theme),
-          color_palette: normalizePaletteKey(menu.color_palette),
+          brand_icon: menu.brand_icon || "",
+          shop_description: menu.shop_description || "",
+          contact_phone: menu.contact_phone || "",
+          contact_email: menu.contact_email || "",
+          address_line: menu.address_line || "",
           supported_languages: menu.supported_languages
         })
       });
@@ -57,12 +63,30 @@ export default function RestaurantDashboard() {
     try {
       await apiRequest("/restaurant/categories", {
         method: "POST",
-        body: JSON.stringify({ name: categoryName })
+        body: JSON.stringify({
+          name: categoryName,
+          short_description: categoryShortDescription,
+          image: categoryImage
+        })
       });
       setCategoryName("");
+      setCategoryShortDescription("");
+      setCategoryImage("");
       await loadMenu();
     } catch (addError) {
       setError(addError.message);
+    }
+  }
+
+  async function updateCategoryMeta(categoryId, payload) {
+    try {
+      await apiRequest(`/restaurant/categories/${categoryId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+      await loadMenu();
+    } catch (updateError) {
+      setError(updateError.message);
     }
   }
 
@@ -159,19 +183,6 @@ export default function RestaurantDashboard() {
                 </option>
               ))}
             </select>
-            <select
-              className="rounded border p-2"
-              onChange={(e) =>
-                setMenu((m) => ({ ...m, color_palette: normalizePaletteKey(e.target.value) }))
-              }
-              value={normalizePaletteKey(menu.color_palette)}
-            >
-              {COLOR_PALETTE_OPTIONS.map((palette) => (
-                <option key={palette.value} value={palette.value}>
-                  {palette.label}
-                </option>
-              ))}
-            </select>
             <input
               className="rounded border p-2 md:col-span-2"
               onChange={(e) =>
@@ -185,6 +196,37 @@ export default function RestaurantDashboard() {
               }
               value={menu.supported_languages.join(",")}
             />
+            <input
+              className="rounded border p-2"
+              onChange={(e) => setMenu((m) => ({ ...m, brand_icon: e.target.value }))}
+              placeholder="Brand icon URL"
+              value={menu.brand_icon || ""}
+            />
+            <input
+              className="rounded border p-2"
+              onChange={(e) => setMenu((m) => ({ ...m, contact_phone: e.target.value }))}
+              placeholder="Contact phone"
+              value={menu.contact_phone || ""}
+            />
+            <input
+              className="rounded border p-2"
+              onChange={(e) => setMenu((m) => ({ ...m, contact_email: e.target.value }))}
+              placeholder="Contact email"
+              value={menu.contact_email || ""}
+            />
+            <input
+              className="rounded border p-2"
+              onChange={(e) => setMenu((m) => ({ ...m, address_line: e.target.value }))}
+              placeholder="Address"
+              value={menu.address_line || ""}
+            />
+            <textarea
+              className="rounded border p-2 md:col-span-2"
+              onChange={(e) => setMenu((m) => ({ ...m, shop_description: e.target.value }))}
+              placeholder="Shop description"
+              rows={3}
+              value={menu.shop_description || ""}
+            />
           </div>
           <button className="mt-3 rounded bg-indigo-600 px-3 py-2 text-white" type="submit">
             Save Settings
@@ -193,15 +235,27 @@ export default function RestaurantDashboard() {
 
         <form className="rounded bg-white p-4 shadow" onSubmit={addCategory}>
           <h2 className="text-lg font-semibold">Add Category</h2>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
             <input
-              className="flex-1 rounded border p-2"
+              className="rounded border p-2"
               onChange={(e) => setCategoryName(e.target.value)}
               placeholder="Category name"
               required
               value={categoryName}
             />
-            <button className="rounded bg-slate-800 px-3 py-2 text-white" type="submit">
+            <input
+              className="rounded border p-2"
+              onChange={(e) => setCategoryImage(e.target.value)}
+              placeholder="Category image URL"
+              value={categoryImage}
+            />
+            <input
+              className="rounded border p-2 md:col-span-2"
+              onChange={(e) => setCategoryShortDescription(e.target.value)}
+              placeholder="Category short description"
+              value={categoryShortDescription}
+            />
+            <button className="rounded bg-slate-800 px-3 py-2 text-white md:col-span-2" type="submit">
               Add
             </button>
           </div>
@@ -275,6 +329,11 @@ export default function RestaurantDashboard() {
             {menu.categories.map((category) => (
               <div className="rounded border p-3" key={category.id}>
                 <h3 className="font-semibold">{category.name}</h3>
+                <CategoryMetaEditor
+                  category={category}
+                  key={`meta-${category.id}`}
+                  onSave={updateCategoryMeta}
+                />
                 <div className="mt-2 space-y-3">
                   {category.items.map((item) => (
                     <div className="rounded bg-slate-50 p-2" key={item.id}>
@@ -342,6 +401,46 @@ function TranslationEditor({ itemId, languageCode, itemName, description, onSave
       >
         Save Translation
       </button>
+    </div>
+  );
+}
+
+function CategoryMetaEditor({ category, onSave }) {
+  const [image, setImage] = useState(category.image || "");
+  const [shortDescription, setShortDescription] = useState(category.short_description || "");
+
+  useEffect(() => {
+    setImage(category.image || "");
+    setShortDescription(category.short_description || "");
+  }, [category.image, category.short_description]);
+
+  return (
+    <div className="mt-2 grid gap-2 rounded border bg-slate-50 p-2 md:grid-cols-2">
+      <input
+        className="rounded border p-1.5"
+        onChange={(e) => setImage(e.target.value)}
+        placeholder="Category image URL"
+        value={image}
+      />
+      <button
+        className="rounded bg-indigo-600 px-2 py-1 text-xs text-white"
+        onClick={() =>
+          onSave(category.id, {
+            image,
+            short_description: shortDescription
+          })
+        }
+        type="button"
+      >
+        Save Category Meta
+      </button>
+      <textarea
+        className="rounded border p-1.5 md:col-span-2"
+        onChange={(e) => setShortDescription(e.target.value)}
+        placeholder="Category short description"
+        rows={2}
+        value={shortDescription}
+      />
     </div>
   );
 }

@@ -20,8 +20,13 @@ router.post("/menus", async (req, res, next) => {
     const {
       name,
       restaurant_name: restaurantName,
-      theme = "cafe",
+      theme = "fast_food",
       color_palette: colorPalette = "sunset",
+      brand_icon: brandIcon = "",
+      shop_description: shopDescription = "",
+      contact_phone: contactPhone = "",
+      contact_email: contactEmail = "",
+      address_line: addressLine = "",
       supported_languages: supportedLanguages = ["en"],
       owner_email: ownerEmail,
       owner_password: ownerPassword
@@ -50,8 +55,35 @@ router.post("/menus", async (req, res, next) => {
     const slug = await createUniqueSlug(restaurantName);
 
     const menuInsert = await client.query(
-      "INSERT INTO menus (name, restaurant_name, slug, theme, color_palette, supported_languages, owner_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, slug",
-      [name, restaurantName, slug, theme, colorPalette, supportedLanguages, ownerUser.id]
+      `INSERT INTO menus (
+         name,
+         restaurant_name,
+         slug,
+         theme,
+         color_palette,
+         brand_icon,
+         shop_description,
+         contact_phone,
+         contact_email,
+         address_line,
+         supported_languages,
+         owner_user_id
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, slug`,
+      [
+        name,
+        restaurantName,
+        slug,
+        theme,
+        colorPalette,
+        brandIcon,
+        shopDescription,
+        contactPhone,
+        contactEmail,
+        addressLine,
+        supportedLanguages,
+        ownerUser.id
+      ]
     );
     const menu = menuInsert.rows[0];
     const qrPath = await generateMenuQr(menu.id, menu.slug);
@@ -85,6 +117,11 @@ router.get("/menus", async (req, res, next) => {
          m.slug,
          m.theme,
          m.color_palette,
+         m.brand_icon,
+         m.shop_description,
+         m.contact_phone,
+         m.contact_email,
+         m.address_line,
          m.supported_languages,
          m.owner_user_id,
          u.email AS owner_email

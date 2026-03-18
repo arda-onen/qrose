@@ -1,13 +1,5 @@
 export const THEME_OPTIONS = [
-  { label: "Cafe Theme", value: "cafe" },
-  { label: "Restaurant Theme", value: "restaurant" },
   { label: "Fast Food Theme", value: "fast_food" }
-];
-
-export const COLOR_PALETTE_OPTIONS = [
-  { label: "Sunset", value: "sunset" },
-  { label: "Emerald", value: "emerald" },
-  { label: "Royal", value: "royal" }
 ];
 
 export const paletteChrome = {
@@ -41,21 +33,22 @@ export const paletteChrome = {
 };
 
 export function normalizeThemeKey(themeKey) {
-  if (themeKey === "classic" || themeKey === "minimal") {
-    return "cafe";
-  }
-  if (themeKey === "luxury" || themeKey === "restaurant") {
-    return "restaurant";
-  }
-  if (themeKey === "street_food" || themeKey === "dark_modern" || themeKey === "fast_food") {
+  if (
+    themeKey === "classic" ||
+    themeKey === "minimal" ||
+    themeKey === "cafe" ||
+    themeKey === "luxury" ||
+    themeKey === "restaurant" ||
+    themeKey === "street_food" ||
+    themeKey === "dark_modern" ||
+    themeKey === "fast_food"
+  ) {
     return "fast_food";
   }
-  return "cafe";
+  return "fast_food";
 }
 
 export function normalizePaletteKey(paletteKey) {
-  if (paletteKey === "emerald" || paletteKey === "royal" || paletteKey === "sunset") {
-    return paletteKey;
-  }
+  void paletteKey;
   return "sunset";
 }

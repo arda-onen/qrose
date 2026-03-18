@@ -5,7 +5,7 @@ import MobileCategoryDrawer from "../components/MobileCategoryDrawer";
 import { useActiveCategory } from "../lib/useActiveCategory";
 import { themeMap } from "../themes";
 import ThemeLoadingSkeleton from "../themes/ThemeLoadingSkeleton";
-import { normalizePaletteKey, normalizeThemeKey, paletteChrome } from "../themes/themeStyles";
+import { normalizeThemeKey, paletteChrome } from "../themes/themeStyles";
 
 export default function PublicMenuPage() {
   const { slug } = useParams();
@@ -13,28 +13,23 @@ export default function PublicMenuPage() {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingThemeKey, setLoadingThemeKey] = useState("cafe");
-  const [loadingPaletteKey, setLoadingPaletteKey] = useState("sunset");
+  const [loadingThemeKey, setLoadingThemeKey] = useState("fast_food");
+  const loadingPaletteKey = "sunset";
 
   useEffect(() => {
     async function fetchMenu() {
       setError("");
       setIsLoading(true);
       const cachedTheme = normalizeThemeKey(window.localStorage.getItem(`qrose-theme-${slug}`));
-      const cachedPalette = normalizePaletteKey(window.localStorage.getItem(`qrose-palette-${slug}`));
       setLoadingThemeKey(cachedTheme);
-      setLoadingPaletteKey(cachedPalette);
 
       try {
         const data = await apiRequest(`/menu/${slug}`);
         setMenu(data);
         setSelectedLanguage(data.supported_languages?.[0] || "en");
         const normalizedTheme = normalizeThemeKey(data.theme);
-        const normalizedPalette = normalizePaletteKey(data.color_palette);
         setLoadingThemeKey(normalizedTheme);
-        setLoadingPaletteKey(normalizedPalette);
         window.localStorage.setItem(`qrose-theme-${slug}`, normalizedTheme);
-        window.localStorage.setItem(`qrose-palette-${slug}`, normalizedPalette);
       } catch (fetchError) {
         setError(fetchError.message);
         setMenu(null);
@@ -67,8 +62,7 @@ export default function PublicMenuPage() {
   }
 
   const normalizedTheme = normalizeThemeKey(menu.theme);
-  const normalizedPalette = normalizePaletteKey(menu.color_palette);
-  const chrome = paletteChrome[normalizedPalette] || paletteChrome.sunset;
+  const chrome = paletteChrome.sunset;
   const activeCategoryIndex = Math.max(
     0,
     categoryIds.findIndex((categoryId) => categoryId === activeCategoryId)
@@ -86,26 +80,14 @@ export default function PublicMenuPage() {
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-2">
-          <select
-            className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:ring-2 ${chrome.selector}`}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            value={selectedLanguage}
-          >
-            {menu.supported_languages.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
       <div className="pb-24 md:pb-0">
         <Theme
           activeCategoryId={activeCategoryId}
-          colorPalette={normalizedPalette}
+          colorPalette="sunset"
           languageCode={selectedLanguage}
           menu={menu}
+          onLanguageChange={setSelectedLanguage}
           themeKey={normalizedTheme}
         />
       </div>

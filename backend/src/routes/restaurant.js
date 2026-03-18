@@ -55,7 +55,12 @@ router.put("/menu", async (req, res, next) => {
       restaurant_name: restaurantName,
       theme,
       color_palette: colorPalette,
-      supported_languages: supportedLanguages
+      supported_languages: supportedLanguages,
+      brand_icon: brandIcon,
+      shop_description: shopDescription,
+      contact_phone: contactPhone,
+      contact_email: contactEmail,
+      address_line: addressLine
     } = req.body;
     if (theme && !ALLOWED_THEMES.has(theme)) {
       return res.status(400).json({ message: "Invalid theme." });
@@ -69,10 +74,27 @@ router.put("/menu", async (req, res, next) => {
              restaurant_name = COALESCE($2, restaurant_name),
              theme = COALESCE($3, theme),
              supported_languages = COALESCE($4, supported_languages),
-             color_palette = COALESCE($5, color_palette)
-       WHERE id = $6
+             color_palette = COALESCE($5, color_palette),
+             brand_icon = COALESCE($6, brand_icon),
+             shop_description = COALESCE($7, shop_description),
+             contact_phone = COALESCE($8, contact_phone),
+             contact_email = COALESCE($9, contact_email),
+             address_line = COALESCE($10, address_line)
+       WHERE id = $11
        RETURNING *`,
-      [name, restaurantName, theme, supportedLanguages, colorPalette, menu.id]
+      [
+        name,
+        restaurantName,
+        theme,
+        supportedLanguages,
+        colorPalette,
+        brandIcon,
+        shopDescription,
+        contactPhone,
+        contactEmail,
+        addressLine,
+        menu.id
+      ]
     );
     return res.json(result.rows[0]);
   } catch (error) {
@@ -99,13 +121,18 @@ router.post("/categories", async (req, res, next) => {
     if (!menu) {
       return res.status(404).json({ message: "Menu not found." });
     }
-    const { name, sort_order: sortOrder = 0 } = req.body;
+    const {
+      name,
+      short_description: shortDescription = "",
+      image = "",
+      sort_order: sortOrder = 0
+    } = req.body;
     if (!name) {
       return res.status(400).json({ message: "Category name is required." });
     }
     const result = await pool.query(
-      "INSERT INTO categories (menu_id, name, sort_order) VALUES ($1, $2, $3) RETURNING *",
-      [menu.id, name, sortOrder]
+      "INSERT INTO categories (menu_id, name, short_description, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [menu.id, name, shortDescription, image, sortOrder]
     );
     return res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -117,14 +144,16 @@ router.put("/categories/:id", async (req, res, next) => {
   try {
     const menu = await getOwnedMenu(req);
     const categoryId = Number(req.params.id);
-    const { name, sort_order: sortOrder } = req.body;
+    const { name, short_description: shortDescription, image, sort_order: sortOrder } = req.body;
     const result = await pool.query(
       `UPDATE categories c
          SET name = COALESCE($1, c.name),
-             sort_order = COALESCE($2, c.sort_order)
-       WHERE c.id = $3 AND c.menu_id = $4
+             short_description = COALESCE($2, c.short_description),
+             image = COALESCE($3, c.image),
+             sort_order = COALESCE($4, c.sort_order)
+       WHERE c.id = $5 AND c.menu_id = $6
        RETURNING c.*`,
-      [name, sortOrder, categoryId, menu.id]
+      [name, shortDescription, image, sortOrder, categoryId, menu.id]
     );
     if (!result.rows[0]) {
       return res.status(404).json({ message: "Category not found." });
