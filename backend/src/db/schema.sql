@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS menus (
   theme TEXT NOT NULL,
   color_palette TEXT NOT NULL DEFAULT 'sunset',
   brand_icon TEXT,
+  hero_image TEXT,
   shop_description TEXT,
   contact_phone TEXT,
   contact_email TEXT,
@@ -28,6 +29,9 @@ ADD COLUMN IF NOT EXISTS color_palette TEXT NOT NULL DEFAULT 'sunset';
 
 ALTER TABLE menus
 ADD COLUMN IF NOT EXISTS brand_icon TEXT;
+
+ALTER TABLE menus
+ADD COLUMN IF NOT EXISTS hero_image TEXT;
 
 ALTER TABLE menus
 ADD COLUMN IF NOT EXISTS shop_description TEXT;

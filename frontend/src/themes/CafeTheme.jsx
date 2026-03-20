@@ -39,7 +39,7 @@ export default function CafeTheme({ menu, languageCode, activeCategoryId, colorP
   const accentStyle = useParallaxOffset(0.03, 16);
   const totalItems = menu.categories.reduce((sum, category) => sum + category.items.length, 0);
   const featuredItems = menu.categories.flatMap((category) => category.items).slice(0, 3);
-  const heroImage = featuredItems.find((item) => item.image)?.image;
+  const heroImage = menu.hero_image || featuredItems.find((item) => item.image)?.image;
 
   return (
     <div className="mx-auto max-w-6xl p-3 pb-12 sm:p-4">
@@ -48,7 +48,7 @@ export default function CafeTheme({ menu, languageCode, activeCategoryId, colorP
           <MenuImage
             alt="hero"
             className="absolute inset-0 h-full w-full object-cover"
-            src={apiFileUrl(heroImage)}
+            src={heroImage.startsWith("/uploads/") ? apiFileUrl(heroImage) : heroImage}
             wrapperClassName="absolute inset-0"
           />
         ) : null}

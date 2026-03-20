@@ -23,6 +23,7 @@ router.post("/menus", async (req, res, next) => {
       theme = "fast_food",
       color_palette: colorPalette = "sunset",
       brand_icon: brandIcon = "",
+      hero_image: heroImage = "",
       shop_description: shopDescription = "",
       contact_phone: contactPhone = "",
       contact_email: contactEmail = "",
@@ -62,13 +63,14 @@ router.post("/menus", async (req, res, next) => {
          theme,
          color_palette,
          brand_icon,
+         hero_image,
          shop_description,
          contact_phone,
          contact_email,
          address_line,
          supported_languages,
          owner_user_id
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING id, slug`,
       [
         name,
@@ -77,6 +79,7 @@ router.post("/menus", async (req, res, next) => {
         theme,
         colorPalette,
         brandIcon,
+        heroImage,
         shopDescription,
         contactPhone,
         contactEmail,
@@ -118,6 +121,7 @@ router.get("/menus", async (req, res, next) => {
          m.theme,
          m.color_palette,
          m.brand_icon,
+         m.hero_image,
          m.shop_description,
          m.contact_phone,
          m.contact_email,

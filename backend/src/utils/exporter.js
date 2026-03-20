@@ -136,6 +136,16 @@ export async function generateStaticExport(menuData) {
   await fs.writeFile(path.join(menuDir, "script.js"), EXPORT_TEMPLATE.js, "utf8");
 
   const copiedMenu = { ...menuData };
+  if (copiedMenu.hero_image && copiedMenu.hero_image.startsWith("/uploads/")) {
+    const heroFileName = path.basename(copiedMenu.hero_image);
+    const heroSource = path.resolve(__dirname, "../../", copiedMenu.hero_image.replace(/^\//, ""));
+    const heroTarget = path.join(imagesDir, heroFileName);
+    if (await fs.pathExists(heroSource)) {
+      await fs.copy(heroSource, heroTarget);
+      copiedMenu.hero_image = `./images/${heroFileName}`;
+    }
+  }
+
   for (const category of copiedMenu.categories) {
     for (const item of category.items) {
       if (!item.image || !item.image.startsWith("/uploads/")) {

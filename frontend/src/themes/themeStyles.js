@@ -4,13 +4,13 @@ export const THEME_OPTIONS = [
 
 export const paletteChrome = {
   sunset: {
-    page: "bg-gradient-to-b from-orange-50 via-white to-amber-50",
-    selector: "border-orange-300 bg-white text-orange-700 focus:border-orange-500 focus:ring-orange-200",
-    progressTrack: "bg-orange-200",
-    progressBar: "bg-orange-500",
-    progressText: "text-orange-700",
-    chipBase: "border-orange-200 bg-white text-orange-700",
-    chipActive: "border-orange-500 bg-orange-500 text-white"
+    page: "bg-gradient-to-b from-rose-50 via-white to-slate-50",
+    selector: "border-rose-300 bg-white text-rose-700 focus:border-rose-500 focus:ring-rose-200",
+    progressTrack: "bg-rose-100",
+    progressBar: "bg-rose-500",
+    progressText: "text-rose-700",
+    chipBase: "border-rose-200 bg-white text-rose-700",
+    chipActive: "border-rose-500 bg-rose-500 text-white"
   },
   emerald: {
     page: "bg-gradient-to-b from-emerald-50 via-white to-teal-50",

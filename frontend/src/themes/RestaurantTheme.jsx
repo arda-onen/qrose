@@ -40,7 +40,7 @@ export default function RestaurantTheme({ menu, languageCode, activeCategoryId, 
   const spotlightItems = menu.categories
     .flatMap((category) => category.items.map((item) => ({ ...item, categoryName: category.name })))
     .slice(0, 3);
-  const heroImage = spotlightItems.find((item) => item.image)?.image;
+  const heroImage = menu.hero_image || spotlightItems.find((item) => item.image)?.image;
 
   return (
     <div className="mx-auto max-w-6xl p-3 pb-12 sm:p-4">
@@ -49,7 +49,7 @@ export default function RestaurantTheme({ menu, languageCode, activeCategoryId, 
           <MenuImage
             alt="hero"
             className="absolute inset-0 h-full w-full object-cover"
-            src={apiFileUrl(heroImage)}
+            src={heroImage.startsWith("/uploads/") ? apiFileUrl(heroImage) : heroImage}
             wrapperClassName="absolute inset-0"
           />
         ) : null}

@@ -3,6 +3,8 @@ import { useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import RestaurantDashboard from "./pages/RestaurantDashboard";
+import CategoryEditPage from "./pages/CategoryEditPage";
+import ItemEditPage from "./pages/ItemEditPage";
 import PublicMenuPage from "./pages/PublicMenuPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -51,6 +53,22 @@ export default function App() {
           </ProtectedRoute>
         }
         path="/restaurant"
+      />
+      <Route
+        element={
+          <ProtectedRoute roles={["restaurant"]}>
+            <CategoryEditPage />
+          </ProtectedRoute>
+        }
+        path="/restaurant/categories/:categoryId/edit"
+      />
+      <Route
+        element={
+          <ProtectedRoute roles={["restaurant"]}>
+            <ItemEditPage />
+          </ProtectedRoute>
+        }
+        path="/restaurant/items/:itemId/edit"
       />
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>

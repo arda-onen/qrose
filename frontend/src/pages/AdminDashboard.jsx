@@ -133,39 +133,33 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      <div className="mb-6 rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-600 to-violet-600 p-6 text-white shadow-lg">
-        <p className="text-xs uppercase tracking-[0.2em] text-indigo-100">Control Center</p>
-        <h2 className="mt-1 text-3xl font-semibold tracking-tight">Design and launch stunning QR menus</h2>
-        <p className="mt-2 max-w-2xl text-sm text-indigo-100">
-          Create restaurant accounts, assign beautiful themes, generate QR codes, and export static websites.
-        </p>
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-2xl font-semibold text-slate-900">Manage Menus</h2>
+        <p className="mt-1 text-sm text-slate-600">Create restaurant accounts and manage published menus.</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
+      <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
         <form
-          className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+          className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
           onSubmit={createMenu}
         >
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">New Menu</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-900">Create menu + owner account</h2>
-          </div>
+          <h2 className="text-lg font-semibold text-slate-900">Create Menu</h2>
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="Menu name"
             required
             value={form.name}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, restaurant_name: e.target.value }))}
             placeholder="Restaurant name"
             required
             value={form.restaurant_name}
           />
           <select
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, theme: normalizeThemeKey(e.target.value) }))}
             value={normalizeThemeKey(form.theme)}
           >
@@ -176,44 +170,44 @@ export default function AdminDashboard() {
             ))}
           </select>
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, supported_languages: e.target.value }))}
             placeholder="Languages: en,tr,de,fr"
             value={form.supported_languages}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, brand_icon: e.target.value }))}
             placeholder="Brand icon URL (optional)"
             value={form.brand_icon}
           />
           <textarea
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, shop_description: e.target.value }))}
             placeholder="Shop description (optional)"
             rows={2}
             value={form.shop_description}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))}
             placeholder="Contact phone (optional)"
             value={form.contact_phone}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
             placeholder="Contact email (optional)"
             value={form.contact_email}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, address_line: e.target.value }))}
             placeholder="Address (optional)"
             value={form.address_line}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, owner_email: e.target.value }))}
             placeholder="Restaurant user email"
             required
@@ -221,7 +215,7 @@ export default function AdminDashboard() {
             value={form.owner_email}
           />
           <input
-            className="w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-md border border-slate-300 p-2.5 outline-none focus:border-slate-500"
             onChange={(e) => setForm((f) => ({ ...f, owner_password: e.target.value }))}
             placeholder="Restaurant user password"
             required
@@ -229,7 +223,7 @@ export default function AdminDashboard() {
             value={form.owner_password}
           />
           <button
-            className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
             type="submit"
           >
             Create Menu
@@ -238,11 +232,10 @@ export default function AdminDashboard() {
           {notice ? <p className="rounded-lg bg-emerald-50 p-2 text-sm text-emerald-700">{notice}</p> : null}
         </form>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Management</p>
-              <h2 className="text-xl font-semibold text-slate-900">Published menus</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Published Menus</h2>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
               {menus.length} total
@@ -251,7 +244,7 @@ export default function AdminDashboard() {
           <div className="space-y-3">
             {menus.map((menu) => (
               <div
-                className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm"
+                className="rounded-lg border border-slate-200 bg-white p-4"
                 key={menu.id}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,21 +283,21 @@ export default function AdminDashboard() {
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
                     onClick={() => copyPublicLink(menu.slug)}
                     type="button"
                   >
                     Copy Public Link
                   </button>
                   <button
-                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-900"
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
                     onClick={() => downloadQr(menu.id)}
                     type="button"
                   >
                     Download QR
                   </button>
                   <button
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
                     onClick={() => exportMenu(menu.id, menu.slug)}
                     type="button"
                   >

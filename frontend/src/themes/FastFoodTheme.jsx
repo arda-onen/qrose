@@ -8,8 +8,8 @@ const WAITRESS_SECTION_ID = "call-waitress";
 export default function FastFoodTheme({ menu, languageCode, onLanguageChange, colorPalette }) {
   void colorPalette;
   const heroSizingStyle = {
-    height: "calc(100dvh - 92px)",
-    minHeight: "calc(100vh - 92px)"
+    height: "calc(100dvh - 70px)",
+    minHeight: "calc(100vh - 90px)"
   };
 
   const allItems = useMemo(
@@ -36,7 +36,10 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
     [allItems]
   );
 
-  const heroImage = useMemo(() => allItems.find((item) => item.image)?.image || null, [allItems]);
+  const heroImage = useMemo(
+    () => menu.hero_image || allItems.find((item) => item.image)?.image || null,
+    [menu.hero_image, allItems]
+  );
   const [qtyByItemId, setQtyByItemId] = useState({});
 
   const lineItems = useMemo(
@@ -72,8 +75,8 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
   }
 
   return (
-    <div className="pb-14">
-      <header className="menu-reveal sticky top-0 z-20 bg-white/40 backdrop-blur">
+    <div className="bg-slate-50 text-slate-900">
+      <header className="menu-reveal sticky top-0 z-20 bg-slate-50/80 backdrop-blur">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-slate-200 bg-white/95 px-5 py-2 sm:px-8 lg:px-12">
           <div />
           <div className="flex items-center gap-3 justify-self-center">
@@ -86,7 +89,7 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
           </div>
           <div className="flex items-center justify-self-end gap-3 sm:gap-4">
             <select
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-orange-400"
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-rose-400"
               onChange={(e) => onLanguageChange?.(e.target.value)}
               value={languageCode}
             >
@@ -113,26 +116,31 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
             <MenuImage
               alt={menu.restaurant_name}
               className="h-full w-full object-cover"
-              src={apiFileUrl(heroImage)}
+              src={heroImage.startsWith("/uploads/") ? apiFileUrl(heroImage) : heroImage}
               wrapperClassName="h-full"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange-100 via-amber-100 to-orange-200">
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-rose-100 via-pink-100 to-fuchsia-200">
               <PhotoPlaceholder />
             </div>
           )}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl p-5 text-white sm:p-7">
-          <p className="mt-2 max-w-2xl text-sm text-slate-100 sm:text-base">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/60" />
+        <div className="absolute inset-0 flex items-center justify-center p-5 text-white sm:p-7">
+          <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+            <h1 className="menu-display-street text-4xl uppercase leading-tight text-white drop-shadow sm:text-5xl">
+              {menu.restaurant_name}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-slate-100 sm:text-base">
             {menu.shop_description || "Fresh food, bold flavors, and quick service every day."}
-          </p>
-          <a
-            className="mt-4 inline-flex rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
-            href={`#${WAITRESS_SECTION_ID}`}
-          >
-            Call a Waitress
-          </a>
+            </p>
+            <a
+              className="mt-5 inline-flex rounded-full bg-rose-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              href={`#${WAITRESS_SECTION_ID}`}
+            >
+              Call a Waitress
+            </a>
+          </div>
         </div>
       </section>
 
@@ -165,7 +173,7 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
                       src={apiFileUrl(item.image)}
                     />
                   ) : (
-                    <div className="flex h-40 items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 text-orange-500">
+                    <div className="flex h-40 items-center justify-center bg-gradient-to-br from-rose-100 to-fuchsia-100 text-rose-500">
                       <PhotoPlaceholder />
                     </div>
                   )}
@@ -185,13 +193,13 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
                       {translation?.description || "Chef special fast-food favorite."}
                     </p>
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold uppercase text-orange-700">
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold uppercase text-rose-700">
                         Recent
                       </span>
                       <div className="flex items-center gap-2">
                         {qty > 0 ? <span className="text-xs font-semibold text-slate-600">{qty} in cart</span> : null}
                         <button
-                          className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-orange-600"
+                          className="rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-600"
                           onClick={() => changeQty(item.id, 1)}
                           type="button"
                         >
@@ -207,13 +215,13 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
         </section>
 
         <section className="menu-reveal mb-8" id={WAITRESS_SECTION_ID}>
-          <div className="rounded-3xl border border-orange-200 bg-gradient-to-r from-orange-500 to-amber-500 p-6 text-white shadow-md">
-            <h2 className="menu-display-street mt-1 text-3xl uppercase">Call a Waitress</h2>
-            <p className="mt-2 max-w-2xl text-sm text-orange-50">
+          <div className="rounded-3xl border border-rose-200 bg-white p-6 text-slate-900 shadow-sm">
+            <h2 className="menu-display-street mt-1 text-3xl uppercase text-slate-900">Call a Waitress</h2>
+            <p className="mt-2 max-w-2xl text-sm text-slate-600">
               Need help with recommendations, extras, or table service? Tap the button below.
             </p>
             <button
-              className="mt-4 rounded-full border border-white/40 bg-white/15 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+              className="mt-4 rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
               type="button"
             >
               Call Waitress
@@ -222,20 +230,20 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
         </section>
 
       </div>
-      <footer className="menu-reveal border-y border-slate-200 bg-white/95 py-6 shadow-sm">
+      <footer className="menu-reveal border-y border-slate-800 bg-slate-950 py-6 shadow-sm">
         <div className="mx-auto max-w-6xl px-3 sm:px-4">
-          <h3 className="menu-display-street text-2xl uppercase text-slate-900">Contact & Address</h3>
-          <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+          <h3 className="menu-display-street text-2xl uppercase text-white">Contact & Address</h3>
+          <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
             <p>
-              <span className="font-semibold text-slate-800">Phone:</span>{" "}
+              <span className="font-semibold text-slate-100">Phone:</span>{" "}
               {menu.contact_phone || "Not provided yet"}
             </p>
             <p>
-              <span className="font-semibold text-slate-800">Email:</span>{" "}
+              <span className="font-semibold text-slate-100">Email:</span>{" "}
               {menu.contact_email || "Not provided yet"}
             </p>
             <p className="sm:col-span-2">
-              <span className="font-semibold text-slate-800">Address:</span>{" "}
+              <span className="font-semibold text-slate-100">Address:</span>{" "}
               {menu.address_line || "Not provided yet"}
             </p>
           </div>
@@ -259,7 +267,7 @@ function CartDropdown({ lineItems, totalAmount, onUpdateQty, onReset, languageCo
       >
         <CartIcon />
         {totalCount ? (
-          <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
             {totalCount}
           </span>
         ) : null}
@@ -269,7 +277,7 @@ function CartDropdown({ lineItems, totalAmount, onUpdateQty, onReset, languageCo
         <aside className="absolute right-0 top-12 z-30 w-[300px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Order Card</p>
-            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
               {totalCount} items
             </span>
           </div>
@@ -293,7 +301,7 @@ function CartDropdown({ lineItems, totalAmount, onUpdateQty, onReset, languageCo
                     </button>
                     <span className="w-4 text-center text-xs font-semibold">{qty}</span>
                     <button
-                      className="h-6 w-6 rounded-full bg-orange-500 text-xs text-white"
+                      className="h-6 w-6 rounded-full bg-rose-500 text-xs text-white"
                       onClick={() => onUpdateQty(item.id, 1)}
                       type="button"
                     >
@@ -348,7 +356,7 @@ function BrandIcon({ brandIcon, restaurantName }) {
   }
 
   return (
-    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-lg font-black uppercase text-white shadow-sm">
+    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-fuchsia-500 text-lg font-black uppercase text-white shadow-sm">
       {restaurantName
         .split(" ")
         .map((part) => part[0] || "")
@@ -372,7 +380,7 @@ function CategoryTile({ category }) {
           wrapperClassName="h-full w-full"
         />
       ) : (
-        <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 text-orange-400">
+        <div className="flex h-full items-center justify-center bg-gradient-to-br from-rose-100 to-fuchsia-100 text-rose-400">
           <PhotoPlaceholder />
         </div>
       )}

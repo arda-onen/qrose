@@ -10,6 +10,7 @@ export async function getFullMenuByMenuId(menuId) {
        theme,
        color_palette,
        brand_icon,
+       hero_image,
        shop_description,
        contact_phone,
        contact_email,
