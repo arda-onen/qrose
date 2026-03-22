@@ -1,6 +1,6 @@
 import MenuImage from "../components/MenuImage";
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import { normalizePaletteKey } from "./themeStyles";
 
@@ -38,7 +38,12 @@ export default function RestaurantTheme({ menu, languageCode, activeCategoryId, 
   const palette = restaurantPalette[normalizePaletteKey(colorPalette)];
   const glowStyle = useParallaxOffset(0.04, 20);
   const spotlightItems = menu.categories
-    .flatMap((category) => category.items.map((item) => ({ ...item, categoryName: category.name })))
+    .flatMap((category) =>
+      category.items.map((item) => ({
+        ...item,
+        categoryName: getCategoryTranslation(category, languageCode).name
+      }))
+    )
     .slice(0, 3);
   const heroImage = menu.hero_image || spotlightItems.find((item) => item.image)?.image;
 
@@ -107,7 +112,7 @@ export default function RestaurantTheme({ menu, languageCode, activeCategoryId, 
               href={`#${categoryAnchor(category.id)}`}
               key={category.id}
             >
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </a>
           ))}
         </div>
@@ -121,11 +126,11 @@ export default function RestaurantTheme({ menu, languageCode, activeCategoryId, 
           style={{ animationDelay: `${120 + categoryIndex * 70}ms` }}
         >
           <h2 className={`mb-5 border-b pb-2 text-2xl ${palette.divider} menu-display-luxury ${palette.title}`}>
-            {category.name}
+            {getCategoryTranslation(category, languageCode).name}
           </h2>
           {category.items[0]?.image ? (
             <MenuImage
-              alt={category.name}
+              alt={getCategoryTranslation(category, languageCode).name}
               className="mb-3 h-40 w-full rounded-2xl object-cover"
               src={apiFileUrl(category.items[0].image)}
               wrapperClassName="mb-3 rounded-2xl border border-white/10"

@@ -8,6 +8,7 @@ Node.js + Express + PostgreSQL + React (Vite) + TailwindCSS QR menu SaaS platfor
 - Five menu themes
 - QR code generation
 - Hosted public menu pages (`/menu/:slug`)
+- **Masa QR + garson çağır:** `/menu/:slug?t=<token>` ile masa başına menü; müşteri “Garson çağır” dediğinde restoran panelinde (SSE + yedek polling) anında listelenir.
 - Static export (`index.html`, `style.css`, `script.js`, `menu.json`, `images/`)
 
 ## Project Structure

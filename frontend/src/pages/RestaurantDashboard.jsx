@@ -1,531 +1,409 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import DashboardLayout from "../components/DashboardLayout";
-import { apiFileUrl, apiRequest } from "../lib/api";
-import { THEME_OPTIONS, normalizeThemeKey } from "../themes/themeStyles";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ConfirmModal from "../components/ConfirmModal";
+import WaiterCallAlertModal from "../components/WaiterCallAlertModal";
+import { FlashBanner, RestaurantPageShell } from "../components/restaurant/RestaurantChrome";
+import { RestaurantDashboardSkeleton } from "../components/skeletons/RestaurantSkeletons";
+import { useToast } from "../context/ToastContext";
+import { apiRequest } from "../lib/api";
+import { playWaiterAlertSound } from "../lib/playWaiterAlertSound";
+import { ui } from "../lib/restaurantDashboardUi";
+import { useWaiterCallsStream } from "../lib/useWaiterCallsStream";
+import {
+  CategoryRow,
+  countMissingTranslations,
+  formatDateTime,
+  getLastUpdatedIso,
+  Hint
+} from "../lib/restaurantDashboardUtils";
+
+function QuickLinkCard({ to, title, body, icon }) {
+  return (
+    <Link className={ui.linkCard} to={to}>
+      <div className="flex items-start gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-900">{title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">{body}</p>
+          <span className="mt-3 inline-flex items-center text-sm font-medium text-indigo-600 group-hover:underline">
+            Aç
+            <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function formatCallTime(iso) {
+  if (!iso) {
+    return "—";
+  }
+  try {
+    return new Date(iso).toLocaleString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      day: "2-digit",
+      month: "short"
+    });
+  } catch {
+    return String(iso);
+  }
+}
 
 export default function RestaurantDashboard() {
+  const toast = useToast();
   const [menu, setMenu] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [itemForm, setItemForm] = useState({
-    category_id: "",
-    price: "",
-    item_name: "",
-    description: "",
-    image: null
-  });
-  const [categoryForm, setCategoryForm] = useState({
-    name: "",
-    short_description: "",
-    image: null
-  });
-  const [heroImageFile, setHeroImageFile] = useState(null);
-  const [brandIconFile, setBrandIconFile] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const { calls: waiterCalls, connected: waiterSse, refresh: refreshWaiterCalls } = useWaiterCallsStream();
+  const seenWaiterCallIdsRef = useRef(null);
+  const [waiterAlertLabels, setWaiterAlertLabels] = useState(null);
+  const [waiterBannerPulse, setWaiterBannerPulse] = useState(false);
+
+  useEffect(() => {
+    if (seenWaiterCallIdsRef.current === null) {
+      seenWaiterCallIdsRef.current = new Set(waiterCalls.map((c) => c.id));
+      return;
+    }
+    const prev = seenWaiterCallIdsRef.current;
+    const newcomers = waiterCalls.filter((c) => !prev.has(c.id));
+    seenWaiterCallIdsRef.current = new Set(waiterCalls.map((c) => c.id));
+
+    if (newcomers.length === 0) {
+      return;
+    }
+
+    playWaiterAlertSound();
+    const labels = newcomers.map((c) => c.table_label);
+    newcomers.forEach((c) => {
+      toast.push(`🔔 Garson çağrısı: ${c.table_label}`, "alert", 6000);
+    });
+    setWaiterAlertLabels(labels);
+    setWaiterBannerPulse(true);
+    const t = window.setTimeout(() => setWaiterBannerPulse(false), 6000);
+    const prevTitle = document.title;
+    document.title = `🔔 Garson — ${labels[0] || "çağrı"}`;
+    const titleTimer = window.setTimeout(() => {
+      document.title = prevTitle;
+    }, 5200);
+
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(titleTimer);
+    };
+  }, [waiterCalls, toast]);
 
   async function loadMenu() {
-    try {
-      const data = await apiRequest("/restaurant/menu");
-      setMenu(data);
-      setError("");
-      if (!itemForm.category_id && data.categories[0]) {
-        setItemForm((prev) => ({ ...prev, category_id: String(data.categories[0].id) }));
-      }
-    } catch (loadError) {
-      setError(loadError.message);
-    }
+    const data = await apiRequest("/restaurant/menu");
+    setMenu(data);
+    setError("");
+    return data;
   }
 
   useEffect(() => {
-    loadMenu();
+    (async () => {
+      try {
+        await loadMenu();
+      } catch (e) {
+        setError(e.message);
+      }
+    })();
   }, []);
 
-  async function saveMenuMeta(event) {
-    event.preventDefault();
+  const allItems = useMemo(() => {
+    if (!menu) {
+      return [];
+    }
+    return menu.categories.flatMap((c) => c.items);
+  }, [menu]);
+
+  const lastUpdatedIso = menu ? getLastUpdatedIso(menu) : null;
+  const missingTrCount = menu ? countMissingTranslations(menu) : 0;
+
+  async function resolveWaiterCall(callId) {
     try {
-      await apiRequest("/restaurant/menu", {
-        method: "PUT",
-        body: JSON.stringify({
-          name: menu.name,
-          restaurant_name: menu.restaurant_name,
-          theme: normalizeThemeKey(menu.theme),
-          shop_description: menu.shop_description || "",
-          contact_phone: menu.contact_phone || "",
-          contact_email: menu.contact_email || "",
-          address_line: menu.address_line || "",
-          supported_languages: menu.supported_languages
-        })
-      });
-      setNotice("Settings saved.");
-      await loadMenu();
-    } catch (saveError) {
-      setError(saveError.message);
+      await apiRequest(`/restaurant/waiter-calls/${callId}/resolve`, { method: "POST" });
+      toast.push("Garson çağrısı kapatıldı.");
+      await refreshWaiterCalls();
+    } catch (e) {
+      toast.push(e.message || "İşlem yapılamadı.", "error");
     }
   }
 
-  async function uploadBrandIcon(event) {
-    event.preventDefault();
-    if (!brandIconFile) {
-      setError("Select a brand icon first.");
+  async function executeDelete() {
+    if (!deleteModal) {
       return;
     }
+    setDeleteLoading(true);
+    setError("");
     try {
-      const body = new FormData();
-      body.append("image", brandIconFile);
-      await apiRequest("/restaurant/menu/brand-icon", { method: "POST", body });
-      setBrandIconFile(null);
-      setNotice("Brand icon uploaded.");
+      await apiRequest(`/restaurant/categories/${deleteModal.id}`, { method: "DELETE" });
+      setNotice("Kategori silindi.");
+      setDeleteModal(null);
       await loadMenu();
-    } catch (uploadError) {
-      setError(uploadError.message);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
-  async function uploadHeroImage(event) {
-    event.preventDefault();
-    if (!heroImageFile) {
-      setError("Select a hero image first.");
-      return;
-    }
-    try {
-      const body = new FormData();
-      body.append("image", heroImageFile);
-      await apiRequest("/restaurant/menu/hero-image", { method: "POST", body });
-      setHeroImageFile(null);
-      setNotice("Hero image uploaded.");
-      await loadMenu();
-    } catch (uploadError) {
-      setError(uploadError.message);
-    }
-  }
-
-  async function addCategory(event) {
-    event.preventDefault();
-    try {
-      const body = new FormData();
-      body.append("name", categoryForm.name);
-      body.append("short_description", categoryForm.short_description);
-      if (categoryForm.image) {
-        body.append("image", categoryForm.image);
+  const deleteModalCopy = deleteModal
+    ? {
+        title: "Kategoriyi silmek istediğinize emin misiniz?",
+        message:
+          "Bu kategori ve içindeki tüm ürünler kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+        confirmLabel: "Evet, kategoriyi sil"
       }
-      await apiRequest("/restaurant/categories", { method: "POST", body });
-      setCategoryForm({ name: "", short_description: "", image: null });
-      setNotice("Category added.");
-      await loadMenu();
-    } catch (addError) {
-      setError(addError.message);
-    }
-  }
-
-  async function deleteCategory(categoryId) {
-    try {
-      await apiRequest(`/restaurant/categories/${categoryId}`, { method: "DELETE" });
-      setNotice("Category deleted.");
-      await loadMenu();
-    } catch (deleteError) {
-      setError(deleteError.message);
-    }
-  }
-
-  async function addItem(event) {
-    event.preventDefault();
-    try {
-      const body = new FormData();
-      body.append("category_id", itemForm.category_id);
-      body.append("price", itemForm.price);
-      const defaultLanguageCode = menu.supported_languages[0] || "en";
-      body.append(
-        "translations",
-        JSON.stringify([
-          {
-            language_code: defaultLanguageCode,
-            item_name: itemForm.item_name,
-            description: itemForm.description
-          }
-        ])
-      );
-      if (itemForm.image) {
-        body.append("image", itemForm.image);
-      }
-      await apiRequest("/restaurant/items", { method: "POST", body });
-      setItemForm((prev) => ({
-        ...prev,
-        price: "",
-        item_name: "",
-        description: "",
-        image: null
-      }));
-      setNotice("Item added.");
-      await loadMenu();
-    } catch (addError) {
-      setError(addError.message);
-    }
-  }
-
-  async function deleteItem(itemId) {
-    try {
-      await apiRequest(`/restaurant/items/${itemId}`, { method: "DELETE" });
-      setNotice("Item deleted.");
-      await loadMenu();
-    } catch (deleteError) {
-      setError(deleteError.message);
-    }
-  }
+    : { title: "", message: "", confirmLabel: "" };
 
   if (!menu) {
-    return (
-      <DashboardLayout title="Restaurant Dashboard">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-600">Loading dashboard...</p>
-        </div>
-      </DashboardLayout>
-    );
+    return <RestaurantDashboardSkeleton />;
   }
 
-  const allItems = menu.categories.flatMap((category) =>
-    category.items.map((item) => ({
-      ...item,
-      categoryName: category.name
-    }))
-  );
-
   return (
-    <DashboardLayout title="Restaurant Dashboard">
-      <div className="space-y-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-2xl font-semibold text-slate-900">Menu Management</h2>
-          <p className="mt-1 text-sm text-slate-600">Simple tools for settings, images, categories, and items.</p>
+    <RestaurantPageShell>
+      <ConfirmModal
+        cancelLabel="Vazgeç"
+        confirmLabel={deleteModalCopy.confirmLabel}
+        loading={deleteLoading}
+        message={deleteModalCopy.message}
+        onCancel={() => !deleteLoading && setDeleteModal(null)}
+        onConfirm={executeDelete}
+        open={Boolean(deleteModal)}
+        title={deleteModalCopy.title}
+      />
+
+      <WaiterCallAlertModal
+        onDismiss={() => setWaiterAlertLabels(null)}
+        open={Boolean(waiterAlertLabels?.length)}
+        tableLabels={waiterAlertLabels || []}
+      />
+
+      {error ? <FlashBanner type="error">{error}</FlashBanner> : null}
+      {notice ? <FlashBanner type="success">{notice}</FlashBanner> : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-slate-800">Garson çağrıları</span>
+          <span
+            className={`h-2 w-2 rounded-full ${waiterSse ? "bg-emerald-500" : "bg-amber-400"}`}
+            title={waiterSse ? "Canlı bağlantı" : "Yeniden bağlanıyor / yedek yenileme"}
+          />
         </div>
+        <Link className="text-sm font-medium text-indigo-600 hover:underline" to="/restaurant/tables">
+          Masalar &amp; QR
+        </Link>
+      </div>
 
-        {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-        {notice ? <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p> : null}
-
-        <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={saveMenuMeta}>
-          <h3 className="text-lg font-semibold text-slate-900">Menu Settings</h3>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <input
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) => setMenu((m) => ({ ...m, name: e.target.value }))}
-              placeholder="Menu name"
-              value={menu.name}
-            />
-            <input
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) => setMenu((m) => ({ ...m, restaurant_name: e.target.value }))}
-              placeholder="Restaurant name"
-              value={menu.restaurant_name}
-            />
-            <select
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) => setMenu((m) => ({ ...m, theme: normalizeThemeKey(e.target.value) }))}
-              value={normalizeThemeKey(menu.theme)}
-            >
-              {THEME_OPTIONS.map((theme) => (
-                <option key={theme.value} value={theme.value}>
-                  {theme.label}
-                </option>
-              ))}
-            </select>
-            <input
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) =>
-                setMenu((m) => ({
-                  ...m,
-                  supported_languages: e.target.value
-                    .split(",")
-                    .map((x) => x.trim())
-                    .filter(Boolean)
-                }))
-              }
-              placeholder="Languages: en,tr,de"
-              value={menu.supported_languages.join(",")}
-            />
-            <input
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) => setMenu((m) => ({ ...m, contact_phone: e.target.value }))}
-              placeholder="Contact phone"
-              value={menu.contact_phone || ""}
-            />
-            <input
-              className="rounded-md border border-slate-300 p-2.5"
-              onChange={(e) => setMenu((m) => ({ ...m, contact_email: e.target.value }))}
-              placeholder="Contact email"
-              value={menu.contact_email || ""}
-            />
-            <input
-              className="rounded-md border border-slate-300 p-2.5 md:col-span-2"
-              onChange={(e) => setMenu((m) => ({ ...m, address_line: e.target.value }))}
-              placeholder="Address"
-              value={menu.address_line || ""}
-            />
-            <textarea
-              className="rounded-md border border-slate-300 p-2.5 md:col-span-2"
-              onChange={(e) => setMenu((m) => ({ ...m, shop_description: e.target.value }))}
-              placeholder="Shop description"
-              rows={3}
-              value={menu.shop_description || ""}
-            />
+      {waiterCalls.length > 0 ? (
+        <div
+          className={`rounded-xl border-2 px-4 py-4 shadow-md transition-[box-shadow] duration-300 ${
+            waiterBannerPulse
+              ? "border-amber-500 bg-gradient-to-br from-amber-50 via-amber-100/80 to-orange-50 shadow-[0_0_0_4px_rgba(251,191,36,0.55),0_12px_32px_rgba(180,83,9,0.2)]"
+              : "border-amber-400 bg-gradient-to-br from-amber-50 to-amber-100/60 ring-2 ring-amber-300/40"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md">
+                <svg aria-hidden className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                  />
+                </svg>
+              </span>
+              <div>
+                <p className="text-base font-bold text-amber-950">Garson bekleniyor</p>
+                <p className="text-xs font-medium text-amber-900/90">
+                  {waiterCalls.length} aktif çağrı — masaya gidin
+                </p>
+              </div>
+            </div>
           </div>
-          <button className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800" type="submit">
-            Save Settings
-          </button>
-        </form>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={uploadBrandIcon}>
-            <h3 className="text-lg font-semibold text-slate-900">Brand Icon Upload</h3>
-            <input
-              className="mt-3 w-full text-sm"
-              onChange={(e) => setBrandIconFile(e.target.files?.[0] || null)}
-              type="file"
-            />
-            <button className="mt-3 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800" type="submit">
-              Upload Brand Icon
-            </button>
-            {menu.brand_icon ? (
-              <img
-                alt="Brand icon"
-                className="mt-3 h-20 w-20 rounded-xl border object-cover"
-                src={menu.brand_icon.startsWith("/uploads/") ? apiFileUrl(menu.brand_icon) : menu.brand_icon}
-              />
-            ) : null}
-          </form>
-
-          <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={uploadHeroImage}>
-            <h3 className="text-lg font-semibold text-slate-900">Hero Image Upload</h3>
-            <input
-              className="mt-3 w-full text-sm"
-              onChange={(e) => setHeroImageFile(e.target.files?.[0] || null)}
-              type="file"
-            />
-            <button className="mt-3 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800" type="submit">
-              Upload Hero Image
-            </button>
-            {menu.hero_image ? (
-              <img
-                alt="Hero"
-                className="mt-3 h-28 w-full rounded-xl border object-cover"
-                src={menu.hero_image.startsWith("/uploads/") ? apiFileUrl(menu.hero_image) : menu.hero_image}
-              />
-            ) : null}
-          </form>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={addCategory}>
-            <h3 className="text-lg font-semibold text-slate-900">Add Category</h3>
-            <div className="mt-3 space-y-3">
-              <input
-                className="w-full rounded-md border border-slate-300 p-2.5"
-                onChange={(e) => setCategoryForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Category name"
-                required
-                value={categoryForm.name}
-              />
-              <textarea
-                className="w-full rounded-md border border-slate-300 p-2.5"
-                onChange={(e) => setCategoryForm((f) => ({ ...f, short_description: e.target.value }))}
-                placeholder="Category short description"
-                rows={2}
-                value={categoryForm.short_description}
-              />
-              <input
-                className="w-full text-sm"
-                onChange={(e) => setCategoryForm((f) => ({ ...f, image: e.target.files?.[0] || null }))}
-                type="file"
-              />
-              <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800" type="submit">
-                Add Category
-              </button>
-            </div>
-          </form>
-
-          <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={addItem}>
-            <h3 className="text-lg font-semibold text-slate-900">Add Item</h3>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <select
-                className="rounded-md border border-slate-300 p-2.5"
-                onChange={(e) => setItemForm((f) => ({ ...f, category_id: e.target.value }))}
-                required
-                value={itemForm.category_id}
+          <ul className="mt-4 space-y-2">
+            {waiterCalls.map((c) => (
+              <li
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200/80 bg-white px-3 py-2.5 text-sm shadow-sm"
+                key={c.id}
               >
-                <option value="">Select category</option>
-                {menu.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="rounded-md border border-slate-300 p-2.5"
-                onChange={(e) => setItemForm((f) => ({ ...f, price: e.target.value }))}
-                placeholder="Price"
-                required
-                step="0.01"
-                type="number"
-                value={itemForm.price}
-              />
-              <input
-                className="rounded-md border border-slate-300 p-2.5"
-                onChange={(e) => setItemForm((f) => ({ ...f, item_name: e.target.value }))}
-                placeholder="Item name"
-                required
-                value={itemForm.item_name}
-              />
-              <p className="self-center text-xs text-slate-500">
-                Item text saves in default language: {(menu.supported_languages[0] || "en").toUpperCase()}
-              </p>
-              <textarea
-                className="rounded-md border border-slate-300 p-2.5 md:col-span-2"
-                onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Description"
-                rows={2}
-                value={itemForm.description}
-              />
-              <input
-                className="md:col-span-2 text-sm"
-                onChange={(e) => setItemForm((f) => ({ ...f, image: e.target.files?.[0] || null }))}
-                type="file"
-              />
-              <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 md:col-span-2" type="submit">
-                Add Item
-              </button>
-            </div>
-          </form>
+                <div>
+                  <span className="text-base font-bold text-slate-900">{c.table_label}</span>
+                  <span className="ml-2 tabular-nums text-slate-600">{formatCallTime(c.requested_at)}</span>
+                </div>
+                <button
+                  className={`${ui.subtleBtn} font-semibold text-emerald-900 ring-emerald-300 hover:bg-emerald-50`}
+                  onClick={() => resolveWaiterCall(c.id)}
+                  type="button"
+                >
+                  Gidildi
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
+      ) : (
+        <p className="text-xs text-slate-500">
+          Aktif garson çağrısı yok. Masa QR’larını{" "}
+          <Link className="font-medium text-indigo-600 underline" to="/restaurant/tables">
+            Masalar
+          </Link>{" "}
+          sayfasından oluşturun.
+        </p>
+      )}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Categories</h3>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <QuickLinkCard
+          body="Arama, sıralama, çoklu seçim ve taslak/yayın yönetimi."
+          icon={
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeWidth={1.5} />
+            </svg>
+          }
+          title="Ürünler"
+          to="/restaurant/products"
+        />
+        <QuickLinkCard
+          body="Görüntülenme, QR kod, menü linki ve CSV/JSON dışa aktarma."
+          icon={
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeWidth={1.5} />
+            </svg>
+          }
+          title="İstatistik & paylaşım"
+          to="/restaurant/analytics"
+        />
+        <QuickLinkCard
+          body="Masa başına QR; müşteri garson çağırınca panelde görünür."
+          icon={
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 12h16M12 4v16"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+              />
+            </svg>
+          }
+          title="Masalar & garson"
+          to="/restaurant/tables"
+        />
+        <QuickLinkCard
+          body="Tema, dil, iletişim, görseller ve menü kimliği."
+          icon={
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+              />
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} />
+            </svg>
+          }
+          title="Menü ayarları"
+          to="/restaurant/settings"
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={ui.statCard}>
+          <p className={ui.statLabel}>
+            Kategoriler
+            <Hint text="Menünüzde tanımlı kategori sayısı" />
+          </p>
+          <p className={ui.statValue}>{menu.categories.length}</p>
+        </div>
+        <div className={ui.statCard}>
+          <p className={ui.statLabel}>
+            Ürünler
+            <Hint text="Tüm kategorilerdeki toplam ürün" />
+          </p>
+          <p className={ui.statValue}>{allItems.length}</p>
+        </div>
+        <div className={ui.statCard}>
+          <p className={ui.statLabel}>
+            Eksik çeviri
+            <Hint text="Bir dilde adı boş olan ürün-dil çifti sayısı" />
+          </p>
+          <p className={`${ui.statValue} text-amber-700`}>{missingTrCount}</p>
+        </div>
+        <div className={ui.statCard}>
+          <p className={ui.statLabel}>
+            Son güncelleme
+            <Hint text="Ürün kayıtlarındaki en son değişiklik zamanı" />
+          </p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{formatDateTime(lastUpdatedIso)}</p>
+        </div>
+      </div>
+
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Kategoriler</h2>
+          <Link className={ui.primaryBtn} to="/restaurant/categories/new">
+            + Kategori ekle
+          </Link>
+        </div>
+        <div className={ui.tableWrap}>
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr>
+                <th className={ui.tableHeadCell}>Kategori</th>
+                <th className={ui.tableHeadCell}>Ürün sayısı</th>
+                <th className={ui.tableHeadCellRight}>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              {menu.categories.length === 0 ? (
                 <tr>
-                  <th className="px-3 py-2">Name</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2">Image</th>
-                  <th className="px-3 py-2">Items</th>
-                  <th className="px-3 py-2">Actions</th>
+                  <td className="px-4 py-12 text-center text-slate-500" colSpan={3}>
+                    <p className="font-medium text-slate-800">Henüz kategori yok</p>
+                    <p className="mt-1 text-sm text-slate-500">İlk kategorinizi ekleyerek başlayın.</p>
+                    <Link className={`${ui.primaryBtn} mt-4 inline-flex`} to="/restaurant/categories/new">
+                      Kategori oluştur
+                    </Link>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {menu.categories.map((category) => (
+              ) : (
+                menu.categories.map((category) => (
                   <CategoryRow
                     category={category}
                     key={category.id}
-                    onDeleteCategory={deleteCategory}
+                    menu={menu}
+                    onRequestDeleteCategory={(id) => setDeleteModal({ id })}
                   />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Items</h3>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-3 py-2">Item</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Price</th>
-                  <th className="px-3 py-2">Sort</th>
-                  <th className="px-3 py-2">Image</th>
-                  <th className="px-3 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allItems.map((item) => (
-                  <ItemRow
-                    item={item}
-                    key={item.id}
-                    onDeleteItem={deleteItem}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    </DashboardLayout>
-  );
-}
-
-function CategoryRow({ category, onDeleteCategory }) {
-  return (
-    <tr className="border-b border-slate-100 align-top">
-      <td className="px-3 py-2 font-medium text-slate-900">{category.name}</td>
-      <td className="px-3 py-2 text-slate-600">{category.short_description || "-"}</td>
-      <td className="px-3 py-2">
-        {category.image ? (
-          <img
-            alt={category.name}
-            className="h-14 w-20 rounded-md border object-cover"
-            src={category.image.startsWith("/uploads/") ? apiFileUrl(category.image) : category.image}
-          />
-        ) : (
-          <span className="text-xs text-slate-400">No image</span>
-        )}
-      </td>
-      <td className="px-3 py-2 text-slate-600">{category.items.length}</td>
-      <td className="px-3 py-2">
-        <div className="flex flex-wrap gap-2">
-          <Link
-            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
-            to={`/restaurant/categories/${category.id}/edit`}
-          >
-            Edit
-          </Link>
-          <button
-            className="rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
-            onClick={() => onDeleteCategory(category.id)}
-            type="button"
-          >
-            Delete
-          </button>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </td>
-    </tr>
-  );
-}
+      </section>
 
-function ItemRow({ item, onDeleteItem }) {
-  const itemName = item.translations?.[0]?.item_name || `Item #${item.id}`;
-
-  return (
-    <tr className="border-b border-slate-100 align-top">
-      <td className="px-3 py-2 font-medium text-slate-900">{itemName}</td>
-      <td className="px-3 py-2 text-slate-600">{item.categoryName}</td>
-      <td className="px-3 py-2 text-slate-700">${Number(item.price).toFixed(2)}</td>
-      <td className="px-3 py-2 text-slate-600">{item.sort_order ?? 0}</td>
-      <td className="px-3 py-2">
-        {item.image ? (
-          <img
-            alt={itemName}
-            className="h-14 w-20 rounded-md border object-cover"
-            src={item.image.startsWith("/uploads/") ? apiFileUrl(item.image) : item.image}
-          />
-        ) : (
-          <span className="text-xs text-slate-400">No image</span>
-        )}
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex flex-wrap gap-2">
-          <Link
-            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
-            to={`/restaurant/items/${item.id}/edit`}
-          >
-            Edit
-          </Link>
-          <button
-            className="rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
-            onClick={() => onDeleteItem(item.id)}
-            type="button"
-          >
-            Delete
-          </button>
-        </div>
-      </td>
-    </tr>
+      <section className={ui.cardMuted}>
+        <h3 className="font-semibold text-slate-800">İpuçları</h3>
+        <ul className="mt-3 list-inside list-disc space-y-2 text-slate-600">
+          <li>
+            <strong className="text-slate-700">Taslak</strong> ürünler müşteri menüsünde görünmez.
+          </li>
+          <li>
+            Ürün listesindeki sarı <strong className="text-slate-700">dil rozetleri</strong>, o dilde ürün adının boş
+            olduğunu gösterir; veritabanındaki kod büyük/küçük harften bağımsız eşleşir.
+          </li>
+        </ul>
+      </section>
+    </RestaurantPageShell>
   );
 }

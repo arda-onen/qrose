@@ -6,11 +6,78 @@
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
   margin: 0;
+  min-height: 100%;
+  height: 100%;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+#root {
+  min-height: 100%;
+  height: 100%;
+}
+
+/* Restoran paneli: sayfa (body) kaymasın; yalnızca layout içindeki <main> kaydırılsın — çift scrollbar önlenir */
+html.restaurant-shell-active,
+html.restaurant-shell-active body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.restaurant-shell-active #root {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Uygulama sarmalayıcısı: restoran panelinde taşmayı tek yerde toplar */
+html.restaurant-shell-active #app-shell {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/*
+ * İskelet yükleme: yavaş + linear = akıcı sonsuz döngü (ease-in-out uçlarda yavaşlar, döngüde “tık” hissi verir).
+ */
+.qrose-skeleton {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background-color: #e8ecf1;
+  background-image: linear-gradient(
+    105deg,
+    #e4e8ef 0%,
+    #ebeef3 18%,
+    #f2f4f8 38%,
+    #fafbfc 50%,
+    #f2f4f8 62%,
+    #ebeef3 82%,
+    #e4e8ef 100%
+  );
+  background-size: 220% 100%;
+  animation: qrose-skeleton-wave 4.25s linear infinite;
+}
+
+@keyframes qrose-skeleton-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qrose-skeleton {
+    animation-duration: 9s;
+  }
 }
 
 .theme-font-classic {

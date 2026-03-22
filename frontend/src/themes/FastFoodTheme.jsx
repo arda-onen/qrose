@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import MenuImage from "../components/MenuImage";
 import { apiFileUrl } from "../lib/api";
-import { formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 
 const WAITRESS_SECTION_ID = "call-waitress";
 
@@ -18,10 +18,10 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
         category.items.map((item) => ({
           ...item,
           categoryId: category.id,
-          categoryName: category.name
+          categoryName: getCategoryTranslation(category, languageCode).name
         }))
       ),
-    [menu]
+    [menu, languageCode]
   );
 
   const recentItems = useMemo(
@@ -151,7 +151,7 @@ export default function FastFoodTheme({ menu, languageCode, onLanguageChange, co
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {menu.categories.map((category) => (
-              <CategoryTile key={category.id} category={category} />
+              <CategoryTile category={category} key={category.id} languageCode={languageCode} />
             ))}
           </div>
         </section>
@@ -366,15 +366,17 @@ function BrandIcon({ brandIcon, restaurantName }) {
   );
 }
 
-function CategoryTile({ category }) {
+function CategoryTile({ category, languageCode }) {
   const imagePath = category.image || category.items.find((item) => item.image)?.image || "";
-  const shortDescription = category.short_description || `${category.items.length} items available`;
+  const cTr = getCategoryTranslation(category, languageCode);
+  const shortDescription =
+    cTr.short_description?.trim() || `${category.items.length} ürün`;
 
   return (
     <article className="menu-card group relative h-52 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {imagePath ? (
         <MenuImage
-          alt={category.name}
+          alt={cTr.name}
           className="h-full w-full object-cover"
           src={imagePath.startsWith("/uploads/") ? apiFileUrl(imagePath) : imagePath}
           wrapperClassName="h-full w-full"
@@ -385,7 +387,7 @@ function CategoryTile({ category }) {
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center bg-black/30 px-4 text-center">
-        <h3 className="menu-display-street text-3xl uppercase text-white drop-shadow">{category.name}</h3>
+        <h3 className="menu-display-street text-3xl uppercase text-white drop-shadow">{cTr.name}</h3>
       </div>
       <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/85 via-black/70 to-transparent p-3 text-sm text-slate-100 transition-transform duration-300 group-hover:translate-y-0">
         {shortDescription}

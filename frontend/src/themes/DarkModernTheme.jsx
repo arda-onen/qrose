@@ -1,5 +1,5 @@
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import MenuImage from "../components/MenuImage";
 
@@ -31,7 +31,7 @@ export default function DarkModernTheme({ menu, languageCode, activeCategoryId }
                 href={`#${categoryAnchor(category.id)}`}
                 key={category.id}
               >
-                {category.name}
+                {getCategoryTranslation(category, languageCode).name}
               </a>
             ))}
           </div>
@@ -54,7 +54,7 @@ export default function DarkModernTheme({ menu, languageCode, activeCategoryId }
                     }`}
                     href={`#${categoryAnchor(category.id)}`}
                   >
-                    {category.name}
+                    {getCategoryTranslation(category, languageCode).name}
                   </a>
                 </li>
               ))}
@@ -69,7 +69,9 @@ export default function DarkModernTheme({ menu, languageCode, activeCategoryId }
                 key={category.id}
                 style={{ animationDelay: `${140 + categoryIndex * 70}ms` }}
               >
-                <h2 className="mb-4 text-lg font-semibold text-cyan-300">{category.name}</h2>
+                <h2 className="mb-4 text-lg font-semibold text-cyan-300">
+                  {getCategoryTranslation(category, languageCode).name}
+                </h2>
                 <div className="grid gap-4 md:grid-cols-2">
                   {category.items.map((item, itemIndex) => {
                     const translation = getItemTranslation(item, languageCode);

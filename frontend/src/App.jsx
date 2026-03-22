@@ -3,8 +3,15 @@ import { useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import RestaurantDashboard from "./pages/RestaurantDashboard";
+import RestaurantProductsPage from "./pages/RestaurantProductsPage";
+import RestaurantAnalyticsPage from "./pages/RestaurantAnalyticsPage";
+import RestaurantTablesPage from "./pages/RestaurantTablesPage";
 import CategoryEditPage from "./pages/CategoryEditPage";
 import ItemEditPage from "./pages/ItemEditPage";
+import MenuSettingsPage from "./pages/MenuSettingsPage";
+import AddCategoryPage from "./pages/AddCategoryPage";
+import AddItemPage from "./pages/AddItemPage";
+import RestaurantLayout from "./layouts/RestaurantLayout";
 import PublicMenuPage from "./pages/PublicMenuPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -49,27 +56,21 @@ export default function App() {
       <Route
         element={
           <ProtectedRoute roles={["restaurant"]}>
-            <RestaurantDashboard />
+            <RestaurantLayout />
           </ProtectedRoute>
         }
         path="/restaurant"
-      />
-      <Route
-        element={
-          <ProtectedRoute roles={["restaurant"]}>
-            <CategoryEditPage />
-          </ProtectedRoute>
-        }
-        path="/restaurant/categories/:categoryId/edit"
-      />
-      <Route
-        element={
-          <ProtectedRoute roles={["restaurant"]}>
-            <ItemEditPage />
-          </ProtectedRoute>
-        }
-        path="/restaurant/items/:itemId/edit"
-      />
+      >
+        <Route element={<RestaurantDashboard />} index />
+        <Route element={<RestaurantProductsPage />} path="products" />
+        <Route element={<RestaurantTablesPage />} path="tables" />
+        <Route element={<RestaurantAnalyticsPage />} path="analytics" />
+        <Route element={<MenuSettingsPage />} path="settings" />
+        <Route element={<AddCategoryPage />} path="categories/new" />
+        <Route element={<CategoryEditPage />} path="categories/:categoryId/edit" />
+        <Route element={<AddItemPage />} path="items/new" />
+        <Route element={<ItemEditPage />} path="items/:itemId/edit" />
+      </Route>
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   );

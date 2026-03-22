@@ -1,6 +1,11 @@
 import { pool } from "../db/pool.js";
 
-export async function getFullMenuByMenuId(menuId) {
+/**
+ * @param {number} menuId
+ * @param {{ forPublic?: boolean }} [options] forPublic=true: sadece yayında ürünler
+ */
+export async function getFullMenuByMenuId(menuId, options = {}) {
+  const { forPublic = false } = options;
   const menuResult = await pool.query(
     `SELECT
        id,
@@ -42,6 +47,23 @@ export async function getFullMenuByMenuId(menuId) {
 
   const categories = [];
   for (const category of categoriesResult.rows) {
+    const catTransResult = await pool.query(
+      "SELECT id, category_id, language_code, name, short_description FROM category_translations WHERE category_id = $1",
+      [category.id]
+    );
+    let translations = catTransResult.rows;
+    const langOrder = menu.supported_languages || [];
+    translations = [...translations].sort((a, b) => {
+      const ia = langOrder.indexOf(a.language_code);
+      const ib = langOrder.indexOf(b.language_code);
+      const sa = ia === -1 ? 999 : ia;
+      const sb = ib === -1 ? 999 : ib;
+      if (sa !== sb) {
+        return sa - sb;
+      }
+      return String(a.language_code).localeCompare(String(b.language_code));
+    });
+
     const itemsResult = await pool.query(
       `SELECT
          id,
@@ -49,9 +71,12 @@ export async function getFullMenuByMenuId(menuId) {
          price::float8 AS price,
          image,
          sort_order,
-         created_at
+         created_at,
+         is_published,
+         updated_at
        FROM menu_items
        WHERE category_id = $1
+         ${forPublic ? "AND is_published = true" : ""}
        ORDER BY sort_order ASC, id ASC`,
       [category.id]
     );
@@ -65,7 +90,7 @@ export async function getFullMenuByMenuId(menuId) {
       items.push({ ...item, translations: translationsResult.rows });
     }
 
-    categories.push({ ...category, items });
+    categories.push({ ...category, translations, items });
   }
 
   return {
@@ -81,7 +106,7 @@ export async function getMenuByOwnerUserId(ownerUserId) {
   if (!result.rows[0]) {
     return null;
   }
-  return getFullMenuByMenuId(result.rows[0].id);
+  return getFullMenuByMenuId(result.rows[0].id, { forPublic: false });
 }
 
 export async function getMenuBySlug(slug) {
@@ -89,5 +114,5 @@ export async function getMenuBySlug(slug) {
   if (!menuResult.rows[0]) {
     return null;
   }
-  return getFullMenuByMenuId(menuResult.rows[0].id);
+  return getFullMenuByMenuId(menuResult.rows[0].id, { forPublic: true });
 }

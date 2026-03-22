@@ -1,5 +1,5 @@
 export const THEME_OPTIONS = [
-  { label: "Fast Food Theme", value: "fast_food" }
+  { label: "Fast food teması", value: "fast_food" }
 ];
 
 export const paletteChrome = {

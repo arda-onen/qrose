@@ -1,5 +1,5 @@
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import MenuImage from "../components/MenuImage";
 
@@ -44,7 +44,7 @@ export default function ClassicTheme({ menu, languageCode, activeCategoryId }) {
               href={`#${categoryAnchor(category.id)}`}
               key={category.id}
             >
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </a>
           ))}
         </div>
@@ -58,7 +58,9 @@ export default function ClassicTheme({ menu, languageCode, activeCategoryId }) {
           style={{ animationDelay: `${120 + categoryIndex * 60}ms` }}
         >
           <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-2">
-            <h2 className="text-xl font-semibold text-slate-800">{category.name}</h2>
+            <h2 className="text-xl font-semibold text-slate-800">
+              {getCategoryTranslation(category, languageCode).name}
+            </h2>
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {category.items.length} options
             </span>

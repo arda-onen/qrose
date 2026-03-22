@@ -1,6 +1,12 @@
-import { categoryAnchor } from "../lib/menuThemeUtils";
+import { categoryAnchor, getCategoryTranslation } from "../lib/menuThemeUtils";
 
-export default function MobileCategoryDrawer({ categories, activeCategoryId, chipBaseClass, chipActiveClass }) {
+export default function MobileCategoryDrawer({
+  categories,
+  activeCategoryId,
+  chipBaseClass,
+  chipActiveClass,
+  languageCode
+}) {
   if (!categories?.length) {
     return null;
   }
@@ -17,7 +23,7 @@ export default function MobileCategoryDrawer({ categories, activeCategoryId, chi
               href={`#${categoryAnchor(category.id)}`}
               key={category.id}
             >
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </a>
           ))}
         </div>

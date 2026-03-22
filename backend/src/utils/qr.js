@@ -21,3 +21,19 @@ export async function generateMenuQr(menuId, slug) {
 
   return `/${relativePath.replaceAll("\\", "/")}`;
 }
+
+/** Masa QR: menü linki + ?t= masa token */
+export async function generateTableQr(menuId, tableId, slug, token) {
+  await fs.ensureDir(qrDir);
+  const relativePath = path.join("generated", "qrcodes", `menu-${menuId}-table-${tableId}.png`);
+  const outputPath = path.resolve(__dirname, "../../", relativePath);
+  const menuUrl = `${process.env.PUBLIC_BASE_URL}/menu/${slug}?t=${encodeURIComponent(token)}`;
+
+  await QRCode.toFile(outputPath, menuUrl, {
+    type: "png",
+    margin: 2,
+    width: 512
+  });
+
+  return `/${relativePath.replaceAll("\\", "/")}`;
+}

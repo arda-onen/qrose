@@ -1,5 +1,5 @@
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import MenuImage from "../components/MenuImage";
 
@@ -32,7 +32,7 @@ export default function MinimalTheme({ menu, languageCode, activeCategoryId }) {
               href={`#${categoryAnchor(category.id)}`}
               key={category.id}
             >
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </a>
           ))}
         </div>
@@ -45,7 +45,9 @@ export default function MinimalTheme({ menu, languageCode, activeCategoryId }) {
           key={category.id}
           style={{ animationDelay: `${110 + categoryIndex * 60}ms` }}
         >
-          <h2 className="mb-5 text-xs uppercase tracking-[0.25em] text-slate-500">{category.name}</h2>
+          <h2 className="mb-5 text-xs uppercase tracking-[0.25em] text-slate-500">
+            {getCategoryTranslation(category, languageCode).name}
+          </h2>
           <div className="space-y-4">
             {category.items.map((item, itemIndex) => {
               const translation = getItemTranslation(item, languageCode);

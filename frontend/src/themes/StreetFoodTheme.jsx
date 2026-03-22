@@ -1,5 +1,5 @@
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import MenuImage from "../components/MenuImage";
 
@@ -38,7 +38,7 @@ export default function StreetFoodTheme({ menu, languageCode, activeCategoryId }
                 href={`#${categoryAnchor(category.id)}`}
                 key={category.id}
               >
-                {category.name}
+                {getCategoryTranslation(category, languageCode).name}
               </a>
             ))}
           </div>
@@ -52,7 +52,7 @@ export default function StreetFoodTheme({ menu, languageCode, activeCategoryId }
             style={{ animationDelay: `${120 + categoryIndex * 60}ms` }}
           >
             <h2 className="inline-block -rotate-1 rounded-md bg-orange-600 px-3 py-1 text-xs font-black uppercase tracking-wider text-white shadow">
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </h2>
             <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {category.items.map((item, itemIndex) => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import { AdminMenusListSkeleton } from "../components/skeletons/AdminSkeletons";
 import { apiRequest } from "../lib/api";
 import { THEME_OPTIONS, normalizeThemeKey } from "../themes/themeStyles";
 
@@ -11,6 +12,7 @@ const THEME_COLOR = {
 
 export default function AdminDashboard() {
   const [menus, setMenus] = useState([]);
+  const [menusLoading, setMenusLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [form, setForm] = useState({
@@ -34,6 +36,8 @@ export default function AdminDashboard() {
       setError("");
     } catch (loadError) {
       setError(loadError.message);
+    } finally {
+      setMenusLoading(false);
     }
   }
 
@@ -238,11 +242,15 @@ export default function AdminDashboard() {
               <h2 className="text-lg font-semibold text-slate-900">Published Menus</h2>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {menus.length} total
+              {menusLoading ? "…" : menus.length} total
             </span>
           </div>
           <div className="space-y-3">
-            {menus.map((menu) => (
+            {menusLoading ? (
+              <AdminMenusListSkeleton />
+            ) : null}
+            {!menusLoading &&
+              menus.map((menu) => (
               <div
                 className="rounded-lg border border-slate-200 bg-white p-4"
                 key={menu.id}
@@ -313,7 +321,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))}
-            {!menus.length ? (
+            {!menusLoading && !menus.length ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
                 No menus yet. Create your first one from the panel on the left.
               </p>

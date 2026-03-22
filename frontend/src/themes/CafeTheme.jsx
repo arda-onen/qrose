@@ -1,6 +1,6 @@
 import MenuImage from "../components/MenuImage";
 import { apiFileUrl } from "../lib/api";
-import { categoryAnchor, formatPrice, getItemTranslation } from "../lib/menuThemeUtils";
+import { categoryAnchor, formatPrice, getCategoryTranslation, getItemTranslation } from "../lib/menuThemeUtils";
 import { useParallaxOffset } from "../lib/useParallaxOffset";
 import { normalizePaletteKey } from "./themeStyles";
 
@@ -108,7 +108,7 @@ export default function CafeTheme({ menu, languageCode, activeCategoryId, colorP
               href={`#${categoryAnchor(category.id)}`}
               key={category.id}
             >
-              {category.name}
+              {getCategoryTranslation(category, languageCode).name}
             </a>
           ))}
         </div>
@@ -122,14 +122,16 @@ export default function CafeTheme({ menu, languageCode, activeCategoryId, colorP
           style={{ animationDelay: `${120 + categoryIndex * 50}ms` }}
         >
           <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-2">
-            <h2 className={`text-xl font-semibold ${palette.sectionTitle}`}>{category.name}</h2>
+            <h2 className={`text-xl font-semibold ${palette.sectionTitle}`}>
+              {getCategoryTranslation(category, languageCode).name}
+            </h2>
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {category.items.length} options
             </span>
           </div>
           {category.items[0]?.image ? (
             <MenuImage
-              alt={category.name}
+              alt={getCategoryTranslation(category, languageCode).name}
               className="mb-3 h-36 w-full rounded-2xl object-cover"
               src={apiFileUrl(category.items[0].image)}
               wrapperClassName="mb-3 rounded-2xl border border-slate-200"

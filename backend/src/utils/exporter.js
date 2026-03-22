@@ -85,7 +85,10 @@ select {
       const categoryBlock = document.createElement("section");
       categoryBlock.className = "category";
       const title = document.createElement("h2");
-      title.textContent = category.name;
+      const catTr =
+        (category.translations || []).find((x) => x.language_code === languageCode) ||
+        (category.translations || [])[0];
+      title.textContent = (catTr && catTr.name) || category.name;
       categoryBlock.appendChild(title);
 
       category.items.forEach((item) => {
@@ -105,7 +108,12 @@ select {
         const desc = document.createElement("p");
         desc.textContent = translation?.description || "";
         const price = document.createElement("strong");
-        price.textContent = "$" + Number(item.price).toFixed(2);
+        price.textContent = new Intl.NumberFormat("tr-TR", {
+          style: "currency",
+          currency: "TRY",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(Number(item.price || 0));
         card.append(name, desc, price);
         categoryBlock.appendChild(card);
       });

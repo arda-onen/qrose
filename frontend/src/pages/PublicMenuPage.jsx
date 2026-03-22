@@ -1,34 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { apiRequest } from "../lib/api";
+import { useParams, useSearchParams } from "react-router-dom";
+import { apiRequest, publicApiRequest } from "../lib/api";
+import PublicCallWaiterFab from "../components/PublicCallWaiterFab";
 import MobileCategoryDrawer from "../components/MobileCategoryDrawer";
 import { useActiveCategory } from "../lib/useActiveCategory";
 import { themeMap } from "../themes";
-import ThemeLoadingSkeleton from "../themes/ThemeLoadingSkeleton";
 import { normalizeThemeKey, paletteChrome } from "../themes/themeStyles";
+
+/** React Strict Mode (dev) aynı sayfada effect'i iki kez çalıştırır; izleme POST'u çift gider. Aynı slug için kısa sürede tekrar göndermeyi engeller. */
+let lastMenuTrackSent = { slug: null, at: 0 };
+const MENU_TRACK_DEDupe_MS = 1500;
 
 export default function PublicMenuPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const tableToken = (searchParams.get("t") || "").trim();
   const [menu, setMenu] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingThemeKey, setLoadingThemeKey] = useState("fast_food");
-  const loadingPaletteKey = "sunset";
 
   useEffect(() => {
     async function fetchMenu() {
       setError("");
       setIsLoading(true);
-      const cachedTheme = normalizeThemeKey(window.localStorage.getItem(`qrose-theme-${slug}`));
-      setLoadingThemeKey(cachedTheme);
 
       try {
         const data = await apiRequest(`/menu/${slug}`);
         setMenu(data);
         setSelectedLanguage(data.supported_languages?.[0] || "en");
         const normalizedTheme = normalizeThemeKey(data.theme);
-        setLoadingThemeKey(normalizedTheme);
         window.localStorage.setItem(`qrose-theme-${slug}`, normalizedTheme);
       } catch (fetchError) {
         setError(fetchError.message);
@@ -39,6 +40,29 @@ export default function PublicMenuPage() {
     }
     fetchMenu();
   }, [slug]);
+
+  useEffect(() => {
+    if (!menu) {
+      return undefined;
+    }
+    const now = Date.now();
+    if (
+      lastMenuTrackSent.slug === slug &&
+      now - lastMenuTrackSent.at < MENU_TRACK_DEDupe_MS
+    ) {
+      return undefined;
+    }
+    lastMenuTrackSent = { slug, at: now };
+
+    const itemIds = menu.categories.flatMap((c) => c.items.map((i) => i.id));
+    publicApiRequest(`/track/menu/${slug}`, {
+      method: "POST",
+      body: JSON.stringify({ itemIds })
+    }).catch(() => {
+      /* istatistik hatası menüyü etkilemesin */
+    });
+    return undefined;
+  }, [menu, slug]);
 
   const Theme = useMemo(() => {
     if (!menu) {
@@ -53,10 +77,14 @@ export default function PublicMenuPage() {
     return <p className="p-4 text-red-600">{error}</p>;
   }
   if (isLoading || !menu || !Theme) {
-    const loadingChrome = paletteChrome[loadingPaletteKey] || paletteChrome.sunset;
     return (
-      <div className={`min-h-screen ${loadingChrome.page}`}>
-        <ThemeLoadingSkeleton themeKey={loadingThemeKey} />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 text-slate-600">
+        <span
+          aria-hidden
+          className="h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"
+        />
+        <p className="text-sm font-medium">Yükleniyor…</p>
+        <span className="sr-only">Menü yükleniyor</span>
       </div>
     );
   }
@@ -81,7 +109,7 @@ export default function PublicMenuPage() {
           />
         </div>
       </div>
-      <div className="pb-24 md:pb-0">
+      <div className={tableToken ? "pb-32 md:pb-10" : "pb-24 md:pb-0"}>
         <Theme
           activeCategoryId={activeCategoryId}
           colorPalette="sunset"
@@ -96,7 +124,9 @@ export default function PublicMenuPage() {
         categories={menu.categories}
         chipActiveClass={chrome.chipActive}
         chipBaseClass={chrome.chipBase}
+        languageCode={selectedLanguage}
       />
+      <PublicCallWaiterFab slug={slug} tableToken={tableToken} />
     </div>
   );
 }
