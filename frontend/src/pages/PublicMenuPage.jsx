@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { apiRequest, publicApiRequest } from "../lib/api";
 import PublicCallWaiterFab from "../components/PublicCallWaiterFab";
 import MobileCategoryDrawer from "../components/MobileCategoryDrawer";
 import { useActiveCategory } from "../lib/useActiveCategory";
 import { themeMap } from "../themes";
-import { normalizeThemeKey, paletteChrome } from "../themes/themeStyles";
+import { normalizePaletteKey, normalizeThemeKey, paletteChrome } from "../themes/themeStyles";
 
 /** React Strict Mode (dev) aynı sayfada effect'i iki kez çalıştırır; izleme POST'u çift gider. Aynı slug için kısa sürede tekrar göndermeyi engeller. */
 let lastMenuTrackSent = { slug: null, at: 0 };
@@ -90,14 +90,13 @@ export default function PublicMenuPage() {
   }
 
   const normalizedTheme = normalizeThemeKey(menu.theme);
-  const chrome = paletteChrome.sunset;
+  const paletteKey = normalizePaletteKey(menu.color_palette);
+  const chrome = paletteChrome[paletteKey] || paletteChrome.sunset;
   const activeCategoryIndex = Math.max(
     0,
     categoryIds.findIndex((categoryId) => categoryId === activeCategoryId)
   );
   const progressPercent = categoryIds.length <= 1 ? 100 : (activeCategoryIndex / (categoryIds.length - 1)) * 100;
-  const activeCategoryName =
-    menu.categories.find((category) => category.id === activeCategoryId)?.name || menu.categories[0]?.name || "";
 
   return (
     <div className={`min-h-screen ${chrome.page}`}>
@@ -112,7 +111,7 @@ export default function PublicMenuPage() {
       <div className={tableToken ? "pb-32 md:pb-10" : "pb-24 md:pb-0"}>
         <Theme
           activeCategoryId={activeCategoryId}
-          colorPalette="sunset"
+          colorPalette={paletteKey}
           languageCode={selectedLanguage}
           menu={menu}
           onLanguageChange={setSelectedLanguage}

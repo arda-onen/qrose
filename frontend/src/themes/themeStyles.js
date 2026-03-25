@@ -1,4 +1,9 @@
+﻿const ALLOWED_THEMES = new Set(["cafe", "restaurant", "fast_food"]);
+const ALLOWED_PALETTES = new Set(["sunset", "emerald", "royal"]);
+
 export const THEME_OPTIONS = [
+  { label: "Kafe teması", value: "cafe" },
+  { label: "Restoran teması", value: "restaurant" },
   { label: "Fast food teması", value: "fast_food" }
 ];
 
@@ -33,22 +38,22 @@ export const paletteChrome = {
 };
 
 export function normalizeThemeKey(themeKey) {
-  if (
-    themeKey === "classic" ||
-    themeKey === "minimal" ||
-    themeKey === "cafe" ||
-    themeKey === "luxury" ||
-    themeKey === "restaurant" ||
-    themeKey === "street_food" ||
-    themeKey === "dark_modern" ||
-    themeKey === "fast_food"
-  ) {
-    return "fast_food";
+  const key = String(themeKey || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  if (ALLOWED_THEMES.has(key)) {
+    return key;
   }
   return "fast_food";
 }
 
 export function normalizePaletteKey(paletteKey) {
-  void paletteKey;
+  const key = String(paletteKey || "")
+    .trim()
+    .toLowerCase();
+  if (ALLOWED_PALETTES.has(key)) {
+    return key;
+  }
   return "sunset";
 }
